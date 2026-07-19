@@ -413,3 +413,241 @@
 **Context**: CONSTRUCTION - U2 Functional Design Part 1. 답변 대기.
 
 ---
+
+## CONSTRUCTION U2 - Functional Design Part 2 Complete
+**Timestamp**: 2026-07-19T00:30:00Z
+**User Input**: "완료" (Q1=A JSON컬럼, Q2=C declared/measured 둘다 저장·응답measured, Q3=A 적재시 변환, Q4=B 최초1회만, Q5=A RegionCatalog 표시명, Q6=A searchOption 저장·비노출, Q7=A totalMeters ASC, Q8=A 잘못된필터 400)
+**AI Response**: "No ambiguity. Generated 3 U2 functional-design artifacts: domain-entities.md(Course JPA 엔티티[id PK/region·declared·measured enum/searchOption 저장·비노출/totalMeters/polyline·cumulativeMeters·waypointAnchors JSON TEXT 컬럼], CourseDistance enum 한글매핑, RegionResponse/CourseSummary/CourseDetail/PolylinePoint/WaypointAnchor DTO, 시드모델), business-logic-model.md(지역목록·코스목록[필터/totalMeters ASC/요약]·코스상세[JSON 역직렬화/404]·CourseDataLoader[기동 최초1회 멱등 적재] 흐름), business-rules.md(BR-U2-1 거리매핑 measured 기준, BR-U2-2 지역매핑 적재시, BR-U2-3 JSON컬럼, BR-U2-4 필터400, BR-U2-5 정렬, BR-U2-6 404, BR-U2-7 멱등적재, BR-U2-8 searchOption 보존, BR-U2-9 표시명, BR-U2-10 응답래핑). Course 테이블은 U2 소유·U5 확장. Marked plan/state. GATE: 승인 대기 → NFR 평가."
+**Context**: CONSTRUCTION - U2 Functional Design complete. GATE: 2-option 승인 대기.
+
+---
+
+## CONSTRUCTION U2 - Functional Design Approval
+**Timestamp**: 2026-07-19T00:40:00Z
+**AI Prompt**: "Continue to Next Stage (NFR)?"
+**User Response**: "승인 & 계속"
+**Status**: Approved
+**Context**: U2 Functional Design 승인. NFR Requirements(경량) 진행.
+
+---
+
+## CONSTRUCTION U2 - NFR Requirements Part 1 (Plan + Questions)
+**Timestamp**: 2026-07-19T00:45:00Z
+**User Input**: (U2 FD 승인 후 진행)
+**AI Response**: "Loaded nfr-requirements.md rule. U2는 조회+JPA 중심, 대부분 U1-a 상속. Created u2-region-course-nfr-requirements-plan.md with 3 light 질문: R1 정적 코스 캐싱(Redis 캐시 vs DB직접), R2 DB 인덱스(region/measuredCategory), R3 U1-a 정책 상속(성능 하드타깃미설정/permitAll 공개/입력검증). [Answer] 태그. aidlc-state → U2 NFR Requirements. GATE: 답변 대기."
+**Context**: CONSTRUCTION - U2 NFR Requirements Part 1. 답변 대기.
+
+---
+
+## CONSTRUCTION U2 - NFR Requirements Part 2 Complete
+**Timestamp**: 2026-07-19T00:55:00Z
+**User Input**: "완료" (R1=A 캐시 안 함, R2=A 인덱스 추가, R3=A U1-a 정책 상속)
+**AI Response**: "No ambiguity. Generated 2 U2 nfr-requirements artifacts: nfr-requirements.md(확장성 소규모 상속, 성능 하드타깃 미설정·캐시 미적용[R1]·region/measuredCategory 인덱스[R2], 가용성 외부의존없음·시드실패격리·404, 보안 공개 permitAll·입력검증 400·민감정보없음, 관측성 U1-a 상속, N/A Resilience/캐시/DR), tech-stack-decisions.md(JPA+MySQL, 경로데이터 JSON TEXT 컬럼+Jackson3 ObjectMapper[@Convert 또는 서비스직렬화], 캐시 미적용, region/measuredCategory 인덱스, ApplicationRunner 시드 멱등, courses.json→src/main/resources/data 복사, ddl-auto update 주의). Marked plan/state. GATE: 승인 대기 → NFR Design."
+**Context**: CONSTRUCTION - U2 NFR Requirements complete. GATE: 2-option 승인 대기.
+
+---
+
+## CONSTRUCTION U2 - NFR Requirements Approval
+**Timestamp**: 2026-07-19T01:00:00Z
+**AI Prompt**: "Continue to Next Stage → NFR Design(U2)?"
+**User Response**: "승인 & 계속"
+**Status**: Approved
+**Context**: U2 NFR Requirements 승인. NFR Design(경량) 진행.
+
+---
+
+## CONSTRUCTION U2 - NFR Design Part 1 (Plan + Questions)
+**Timestamp**: 2026-07-19T01:05:00Z
+**User Input**: (U2 NFR Req 승인 후 진행)
+**AI Response**: "Loaded nfr-design.md rule. U2 매우 경량(외부 회복성·캐시 없음). Created u2-region-course-nfr-design-plan.md with 2 질문: D1 JSON 컬럼 매핑방식(@Convert AttributeConverter vs 서비스레벨 직렬화), D2 waypointCount 산출(저장 컬럼 vs 조회시 계산). [Answer] 태그. aidlc-state → U2 NFR Design. GATE: 답변 대기."
+**Context**: CONSTRUCTION - U2 NFR Design Part 1. 답변 대기.
+
+---
+
+## CONSTRUCTION U2 - NFR Design Part 2 Complete
+**Timestamp**: 2026-07-19T01:15:00Z
+**User Input**: "완료" (D1=A JPA AttributeConverter, D2=B waypointCount 저장 컬럼)
+**AI Response**: "No ambiguity. Generated 2 U2 nfr-design artifacts: nfr-design-patterns.md(영속: @Convert AttributeConverter 3종[Polyline/IntList/WaypointAnchors, Jackson3], enum STRING, region/measuredCategory 인덱스; 조회: 목록 요약[경로JSON 미역직렬화, waypointCount 컬럼], 상세 findById+404; 검증: 필터 enum파싱 400; 시드: ApplicationRunner 멱등; N/A Resilience/캐시/벌크헤드), logical-components.md(RegionController/Service/Catalog확장, CourseController/QueryService/Repository/DataLoader, Course 엔티티[JSON @Convert+waypointCount 컬럼], Converter 3종, 조회흐름, U5 확장경계). Marked plan/state. GATE: 승인 대기 → Infrastructure Design."
+**Context**: CONSTRUCTION - U2 NFR Design complete. GATE: 2-option 승인 대기.
+
+---
+
+## CONSTRUCTION U2 - NFR Design Approval
+**Timestamp**: 2026-07-19T01:20:00Z
+**AI Prompt**: "Continue to Next Stage → Infrastructure Design(U2, light)?"
+**User Response**: "승인 & 계속"
+**Status**: Approved
+**Context**: U2 NFR Design 승인. Infrastructure Design(light) 진행.
+
+---
+
+## CONSTRUCTION U2 - Infrastructure Design (light) Part 1 (Plan + Questions)
+**Timestamp**: 2026-07-19T01:25:00Z
+**User Input**: (U2 NFR Design 승인 후 진행)
+**AI Response**: "Loaded infrastructure-design.md rule. U2는 U1-a EC2 코로케이션 위 MySQL 활성화만. Created u2-region-course-infrastructure-design-plan.md with 1 질문: I1 스키마 관리 정책(ddl-auto update 유지 vs Flyway 마이그레이션 도입). [Answer] 태그. aidlc-state → U2 Infra Design. GATE: 답변 대기."
+**Context**: CONSTRUCTION - U2 Infrastructure Design(light) Part 1. 답변 대기.
+
+---
+
+## CONSTRUCTION U2 - Infrastructure Design (light) Part 2 Complete
+**Timestamp**: 2026-07-19T01:35:00Z
+**User Input**: "완료" (I1=A ddl-auto=update 유지)
+**AI Response**: "No ambiguity. Generated 2 U2 infrastructure-design artifacts: infrastructure-design.md(논리→물리 매핑[course 테이블=EC2 코로케이션 MySQL, courses.json=classpath 리소스], 스토리지[ddl-auto=update 자동생성/region·measuredCategory 인덱스/localhost 바인딩], 컴퓨트·네트워킹·시크릿 U1-a 상속, Redis·TourAPI 무관, N/A/Deferred), deployment-architecture.md(U1-a 토폴로지+course 테이블 반영 ASCII, 기동 시퀀스[테이블 자동생성→멱등 시드], 배포 추가작업 없음, 리스크 ddl-auto/시드갱신). Marked plan/state. GATE: 승인 대기 → Code Generation."
+**Context**: CONSTRUCTION - U2 Infrastructure Design(light) complete. GATE: 2-option 승인 대기.
+
+---
+
+## CONSTRUCTION U2 - Infrastructure Design Approval
+**Timestamp**: 2026-07-19T01:40:00Z
+**AI Prompt**: "Continue to Next Stage → Code Generation(U2)?"
+**User Response**: "승인 & 계속"
+**Status**: Approved
+**Context**: U2 Infrastructure Design 승인. Code Generation Part 1(계획) 진행.
+
+---
+
+## CONSTRUCTION U2 - Code Generation Part 1 (Plan)
+**Timestamp**: 2026-07-19T01:45:00Z
+**User Input**: (U2 Infra 승인 후 진행)
+**AI Response**: "Loaded code-generation.md rule. Created u2-region-course-code-generation-plan.md (single source of truth) with 13 numbered steps + story traceability: Step1 RegionCatalog 표시명 확장(in-place), Step2~3 RegionResponse/Service/Controller+test[US-REGION-1], Step4 CourseDistance enum 한글매핑+test, Step5 PolylinePoint/WaypointAnchor + AttributeConverter 3종+test[D1], Step6 Course 엔티티(@Convert/인덱스)+CourseRepository, Step7 CourseSummary/CourseDetail DTO, Step8 CourseQueryService(필터/정렬/404)+test, Step9 CourseController(400/404)+test[@WebMvcTest], Step10 CourseDataLoader 멱등시드+test, Step11 courses.json→src/main/resources/data, Step12 컴파일검증, Step13 code-summary. 범위밖: POST /courses=U5, 캐시 미적용, 인증 해당없음. Marked aidlc-state → U2 CodeGen Part1. GATE: 계획 승인 대기."
+**AI Prompt**: "U2 코드 생성 계획(13 steps) 승인하고 Part 2 진행?"
+**Context**: CONSTRUCTION - U2 Code Generation Part 1. 참조: plans/u2-region-course-code-generation-plan.md. GATE: 승인 대기.
+
+---
+
+## CONSTRUCTION U2 - Code Generation Part 1 Approval
+**Timestamp**: 2026-07-19T01:50:00Z
+**AI Prompt**: "U2 코드 생성 계획(13 steps) 승인하고 Part 2 진행?"
+**User Response**: "승인 & 계속"
+**Status**: Approved
+**Context**: U2 Code Generation 계획 승인. Part 2 코드 생성 착수.
+
+---
+
+## CONSTRUCTION U2 - Code Generation Part 2 Complete
+**Timestamp**: 2026-07-19T02:10:00Z
+**User Input**: (Part 1 승인 후 Part 2 실행)
+**AI Response**: "Executed all 13 steps of u2-region-course-code-generation-plan.md. 생성: 앱 소스 — domain.region(RegionResponse/RegionService/RegionController), course(CourseDistance/Course 엔티티/CourseRepository/CourseQueryService/CourseController/CourseDataLoader), course.dto(PolylinePoint/WaypointAnchor/CourseSummary/CourseDetail), course.converter(Polyline/IntList/WaypointAnchors Converter) + 테스트 6종. 수정: RegionCatalog 표시명 확장(in-place, U1-a 호환 유지), courses.json→src/main/resources/data/. 스토리 US-REGION-1/US-COURSE-1/US-COURSE-2 완료. 설계반영 Q1=A JSON컬럼/D1 @Convert/D2 waypointCount 컬럼/Q2=C measured 기준/Q4=B 멱등/Q8 필터400/R2 인덱스. 검증: compileJava+compileTestJava BUILD SUCCESSFUL, U2 단위테스트 전부 통과(CourseDataLoaderTest는 실제 courses.json 10코스 매핑+멱등 검증). 전체빌드/통합(MySQL)은 Build & Test. code-summary.md 작성. 플랜 13스텝 [x], aidlc-state U2 완료. GATE: 승인 대기 → 다음 유닛 U3."
+**AI Prompt**: "U2 지역·코스조회 코드 생성 완료. 승인하고 다음 유닛(U3 장소·배지)로 진행할까요?"
+**Context**: CONSTRUCTION - U2 Code Generation complete. U2 유닛 전체(FD/NFR/Infra/Code) 완료. GATE: 2-option 승인 대기.
+
+---
+
+## CONSTRUCTION - Local Integration Smoke Test (U1-a + U2)
+**Timestamp**: 2026-07-19T04:05:00Z
+**User Input**: "B로 시작해" → application-secret.properties에 DB 계정/비번 + TOURAPI_SERVICE_KEY 입력(시크릿 값은 git 제외 파일에만 저장, 문서에 미기재) → "됐어"
+**AI Response**: "로컬 인프라 확인(MySQL 8.4/Redis brew 실행 중). dallyeo DB 생성. ./gradlew bootRun 백그라운드 기동 성공(Tomcat 8080, 3.9s). CourseDataLoader: 10 inserted/0 skipped. 실제 API 검증 전부 정상: GET /regions(GUNSAN 군산/JEONJU 전주), GET /courses(10개, totalMeters ASC), 필터 region=GUNSAN&distance=SHORT(2건), GET /courses/{id} 상세(polyline 111점/cumulativeMeters 111/waypoints 5, @Convert 역직렬화 정상), 404(NOT_FOUND ApiResponse 래핑), 400(BAD_REQUEST 잘못된 region). DB 영속 확인(course 10행, searchOption 저장·응답 비노출). 앱 종료. U1-a(ApiResponse/GlobalExceptionHandler/SecurityConfig permitAll/Jackson3)+U2(Course @Convert/시드/필터/정렬/QueryService) 통합 동작 실증 완료. 정식 Build&Test는 전 유닛 후."
+**Context**: CONSTRUCTION - U1-a+U2 로컬 통합 스모크 테스트 성공. 실제 부팅·엔드포인트·DB 영속 검증.
+
+---
+
+## CONSTRUCTION - Enter U3 / Functional Design Part 1
+**Timestamp**: 2026-07-19T04:30:00Z
+**User Input**: "U3로 이어가자" (U2 로컬 검증 후 Postman 가이드 제공 완료, U3 진행)
+**AI Response**: "Entered U3(장소·배지). Loaded FD context: api-spec §6(places search/detail/nearby/list), tourapi-field-mapping(areaBasedList2/locationBasedList2/searchKeyword2 목록 + detailCommon2/Intro2/Info2/Image2 상세, contentTypeId별 intro 필드 분기 12관광지/39음식점), badge-data-analysis(모범음식점 UTF-8 52건/착한가격업소 EUC-KR 60건, lcnsno 없음→업소명+주소 정규화 매칭, D 하이브리드 확정, 요식업만·군산만), components(PlaceController/Service/DetailAssembler/Mapper, BadgeService/Repository/CsvLoader/AddressNormalizer), stories US-PLACE-1~4 + US-BADGE-1. Created u3-place-badge-functional-design-plan.md with 8 questions. GATE: 답변 대기."
+**Context**: CONSTRUCTION - U3 Functional Design Part 1. 답변 대기.
+
+---
+
+## CONSTRUCTION U3 - Functional Design Part 2 Complete
+**Timestamp**: 2026-07-19T04:45:00Z
+**User Input**: "작성 완료" (P1~P8 전부 A + 보강: P3 순차 common→intro·향후 병렬구조 명시, P5 업소명+주소 둘 다 일치·보수적·실패집계, P8 null 사유 구분[정상null vs 미매핑타입 WARN])
+**AI Response**: "No ambiguity. Generated 3 U3 functional-design artifacts: domain-entities.md(PlaceSummary/PlaceDetail DTO, Badge 엔티티[type/region/placeName/normalizedName/normalizedAddress+인덱스], BadgeType enum, 검색 파라미터 모델, TourApiClient 신규 오퍼레이션 5종[location/keyword/area/detailCommon/detailIntro 엔드포인트별 서킷]), business-logic-model.md(search/list/nearby/detail 흐름, Assembler common→intro 순차[P3]+향후 병렬구조, 배지매칭[normName AND normAddr], CSV 적재[모범음식점UTF-8/착한가격EUC-KR 요식업만 멱등]), business-rules.md(BR-U3-1~12: 목록매핑/좌표정책/카테고리/검증400/상세조합/businessHours 12·39분기+null사유구분/404/배지매칭 둘다일치·실패집계/정규화/CSV 군산·요식업만·EUC-KR/캐싱회복성/응답래핑). Badge 테이블 U3 소유. Marked plan/state. GATE: 승인 대기 → NFR."
+**Context**: CONSTRUCTION - U3 Functional Design complete. GATE: 2-option 승인 대기.
+
+---
+
+## CONSTRUCTION U3 - Functional Design Approval / NFR Requirements Part 1
+**Timestamp**: 2026-07-19T04:50:00Z
+**AI Prompt**: "Continue to Next Stage → NFR(U3)?"
+**User Response**: "승인 & 계속"
+**Status**: Approved
+**AI Response**: "U3 FD 승인. Created u3-place-badge-nfr-requirements-plan.md with 3 질문: N1 TourAPI 신규 오퍼레이션 회복성/캐시(엔드포인트별 인스턴스 확장 확인), N2 상세조합 성능(순차 2콜 하드타깃 미설정 상속), N3 배지 조회 성능(정규화 키 인덱스). GATE: 답변 대기."
+**Context**: CONSTRUCTION - U3 NFR Requirements Part 1. 답변 대기.
+
+---
+
+## CONSTRUCTION U3 - NFR Requirements Part 2 Complete
+**Timestamp**: 2026-07-19T04:58:00Z
+**User Input**: "완료" (N1=A 엔드포인트별 서킷+캐시, N2=A 성능 하드타깃 미설정, N3=A 복합인덱스+멱등 적재 + 보강: CSV 파일별 인코딩 명시[모범음식점 UTF-8/착한가격 EUC-KR], 오독 시 정규화 매칭 전부 실패)
+**AI Response**: "No ambiguity. Generated 2 U3 nfr-requirements artifacts: nfr-requirements.md(성능 하드타깃 미설정·상세 순차2콜 감수, 가용성 엔드포인트별 서킷 5종+캐시·404·배지 미매칭 빈배열, 보안 공개permitAll·입력검증400, 관측성 배지매칭실패집계·businessHours 미매핑WARN·CSV 인코딩 명시), tech-stack-decisions.md(TourApiClient 5오퍼레이션 확장, Resilience4j 엔드포인트별 인스턴스 application.properties 추가목록, Badge 복합인덱스, CSV 파일별 Charset[UTF-8/EUC-KR] 필수·classpath 복사, AddressNormalizer, Assembler common→intro). Marked plan/state. GATE: 승인 대기 → NFR Design."
+**Context**: CONSTRUCTION - U3 NFR Requirements complete. GATE: 2-option 승인 대기.
+
+---
+
+## CONSTRUCTION U3 - NFR Requirements Approval / NFR Design Part 1
+**Timestamp**: 2026-07-19T05:03:00Z
+**AI Prompt**: "Continue to Next Stage → NFR Design(U3)?"
+**User Response**: "승인 & 계속"
+**Status**: Approved
+**AI Response**: "U3 NFR Req 승인. Created u3-place-badge-nfr-design-plan.md with 2 질문: D1 AddressNormalizer 정규화 규칙 수준(보수적 vs 공격적), D2 배지 조회 위치(Assembler vs PlaceService). GATE: 답변 대기."
+**Context**: CONSTRUCTION - U3 NFR Design Part 1. 답변 대기.
+
+---
+
+## CONSTRUCTION U3 - NFR Design Part 2 Complete
+**Timestamp**: 2026-07-19T05:10:00Z
+**User Input**: "완료" (D1=A 보수적 정규화, D2=A Assembler가 BadgeService 호출)
+**AI Response**: "No ambiguity. Generated 2 U3 nfr-design artifacts: nfr-design-patterns.md(회복성/캐시 엔드포인트별 5인스턴스 U1-a 확장, 상세조합 common→intro 순차+향후 병렬, AddressNormalizer 보수적[공백/괄호/특수문자/시도명통일], 배지 복합인덱스 조회+멱등 적재, 검증400, 관측성 매칭실패집계), logical-components.md(PlaceController/Service/DetailAssembler/Mapper, BadgeService/Repository/CsvLoader/AddressNormalizer, Badge 엔티티, TourApiClient 4오퍼레이션 확장, 조회흐름, U3 경계). Marked plan/state. GATE: 승인 대기 → Infrastructure Design."
+**Context**: CONSTRUCTION - U3 NFR Design complete. GATE: 2-option 승인 대기.
+
+---
+
+## CONSTRUCTION U3 - NFR Design Approval / Infrastructure Design
+**Timestamp**: 2026-07-19T05:15:00Z
+**AI Prompt**: "Continue to Next Stage → Infrastructure Design(U3)?"
+**User Response**: "승인 & 계속"
+**Status**: Approved
+**Context**: U3 NFR Design 승인. Infrastructure Design(light) 진행 — 남은 결정 없음(전부 U1-a/U2 상속), 계획+산출물 동시 생성.
+
+---
+
+## CONSTRUCTION U3 - Infrastructure Design (light) Complete
+**Timestamp**: 2026-07-19T05:20:00Z
+**AI Response**: "No open questions(전부 상속). Generated 2 U3 infrastructure-design artifacts: infrastructure-design.md(badge 테이블 ddl-auto=update+복합인덱스, CSV 2종 classpath[UTF-8/EUC-KR], TourAPI 443 egress 실사용, Redis 캐시 실사용, N/A/Deferred 상속), deployment-architecture.md(토폴로지+badge/CSV/egress 반영, 기동 시퀀스[badge 테이블 생성→CSV 멱등 적재], 배포 추가작업 없음·TOURAPI_SERVICE_KEY env+443 필수, 리스크 TourAPI 실시간의존/CSV 인코딩). Marked plan/state. GATE: 승인 대기 → Code Generation."
+**Context**: CONSTRUCTION - U3 Infrastructure Design(light) complete. GATE: 2-option 승인 대기.
+
+---
+
+## CONSTRUCTION U3 - Infrastructure Approval / Code Generation Part 1 (Plan)
+**Timestamp**: 2026-07-19T05:30:00Z
+**AI Prompt(prev)**: "Continue → Code Generation(U3)?"
+**User Response**: "승인 & 계속"
+**Status**: Approved (Infra)
+**AI Response**: "Loaded code-generation.md. CSV 구조 검증(모범음식점 UTF-8 BOM 업소명/소재지, 착한가격 EUC-KR 업종/업소명/주소·비요식 미용12/목욕2/이용1 제외). Created u3-place-badge-code-generation-plan.md with 14 numbered steps + story traceability: S1 설정/CSV복사, S2 TourApiNormalizer 확장(toCommon/toIntro 12·39분기)+test, S3 TourApiClient 4오퍼레이션 확장(엔드포인트별 서킷/캐시), S4 Place DTO, S5 PlaceMapper(businessHours 분기)+test, S6 PlaceService(search/list/nearby), S7 Badge도메인(BadgeType/Badge/Repository), S8 AddressNormalizer(보수적)+test, S9 BadgeService+test, S10 BadgeCsvLoader(파일별 인코딩/요식업/멱등/quote-aware)+test, S11 PlaceDetailAssembler(common→intro+badges/404)+test, S12 PlaceController(검증400)+test, S13 컴파일검증, S14 code-summary. 범위밖 detailInfo/Image·하이브리드·전주=후속. Marked state. GATE: 계획 승인 대기."
+**AI Prompt**: "U3 코드 생성 계획(14 steps) 승인하고 Part 2 진행?"
+**Context**: CONSTRUCTION - U3 Code Generation Part 1. 참조: plans/u3-place-badge-code-generation-plan.md. GATE: 승인 대기.
+
+---
+
+## CONSTRUCTION U3 - Code Generation Part 1 Approval
+**Timestamp**: 2026-07-19T05:35:00Z
+**AI Prompt**: "U3 코드 생성 계획(14 steps) 승인하고 Part 2 진행?"
+**User Response**: "승인 & 계속"
+**Status**: Approved
+**Context**: U3 Code Generation 계획 승인. Part 2 코드 생성 착수.
+
+---
+
+## CONSTRUCTION U3 - Code Generation Part 2 Complete
+**Timestamp**: 2026-07-19T06:15:00Z
+**User Input**: (Part 1 승인 후 Part 2 실행)
+**AI Response**: "Executed all 14 steps. 수정(U1-a 확장): TourApiClient(+4 오퍼레이션 엔드포인트별 서킷/캐시), TourApiNormalizer(+toCommon/toIntro 12·39분기+WARN, homepage href), TourCommon(+contentTypeId), GlobalExceptionHandler(+누락/타입불일치 400), application.properties(+Resilience 4인스턴스), CSV 2종 배치. 생성: place(Controller/Service/DetailAssembler/Mapper + Summary/Detail DTO), badge(BadgeType/Badge엔티티/Repository/Service/AddressNormalizer/CsvLoader) + 테스트 7종. 스토리 US-PLACE-1~4/US-BADGE-1 완료. 설계반영 P2/P3 common→intro순차, P4 1000m, P5 업소명+주소 둘다, P6 군산·요식업만, P8 12/39분기+WARN, N1 엔드포인트별 서킷, category coarse+후처리필터, CSV 파일별 인코딩/quote-aware/BOM. 검증: compileJava+compileTestJava 성공, U3 단위테스트 전부 통과(BadgeCsvLoaderTest 실제 CSV 97건[52+45] 적재·EUC-KR·요식업필터·멱등 검증). code-summary.md 작성. 플랜 14스텝 [x], aidlc-state U3 완료. GATE: 승인 대기 → 다음 유닛 U4."
+**AI Prompt**: "U3 장소·배지 코드 생성 완료. 승인하고 다음 유닛(U4 인증·사용자, U1-b 포함)로 진행할까요?"
+**Context**: CONSTRUCTION - U3 Code Generation complete. U3 유닛 전체 완료. GATE: 2-option 승인 대기.
+
+---
+
+## CONSTRUCTION - Local Integration Test (U3 places, 실제 TourAPI) + 버그 4건 수정
+**Timestamp**: 2026-07-19T06:25:00Z
+**User Input**: "부팅해서 places 실제로 테스트해줘"
+**AI Response**: "부팅(MySQL/Redis brew 실행 중, TOURAPI_SERVICE_KEY 존재). 배지 DB 97건 적재(모범 52+착한 45, 비요식 15 제외). 실제 TourAPI 연동 검증 중 버그 4건 발견·수정:
+(1) serviceKey 이중인코딩 401 → TourApiClient.buildUri로 URI 직접 조립(serviceKey 원본 유지);
+(2) Redis 캐시 타입소실 ClassCastException 500 → CacheConfig enableDefaultTyping(범위제한 검증기);
+(3) 배지 매칭 false negative → AddressNormalizer 대괄호[]태그 제거 확장(아서원→GOOD_PRICE 실매칭);
+(4) 없는 장소 404대신 400 → detailCommon @Cacheable(unless=result==null).
+매 수정마다 재컴파일·재부팅·재검증. 최종 실증(실 TourAPI+MySQL+Redis): /places/search(해망굴), /places/{id}(businessHours '상시 개방'), /places/nearby(+category RESTAURANT 11건 거리순), 배지(아서원 GOOD_PRICE), 404(99999999), 400(잘못된 category/radius) 전부 정상. 단위테스트 전체 재통과. code-summary.md 버그수정 섹션 추가. 앱 종료.
+참고: 상세/반경은 TourAPI read 3s 타임아웃에 민감해 콜드 캐시 시 간헐 502(회복성 정상동작)."
+**Context**: CONSTRUCTION - U3 로컬 통합 테스트 성공. 실 TourAPI 연동 버그 4건 수정. U1-a/U2/U3 실환경 동작 실증.
+
+---

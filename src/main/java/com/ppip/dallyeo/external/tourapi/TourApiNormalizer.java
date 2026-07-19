@@ -7,8 +7,12 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.ppip.dallyeo.external.tourapi.dto.TourItem;
+import com.ppip.dallyeo.external.tourapi.dto.TourCommon;
+import com.ppip.dallyeo.external.tourapi.dto.TourIntro;
 
 /**
  * TourAPI 원본 JSON → 내부 정규화 모델 변환 (BR-3).
@@ -105,6 +109,63 @@ public class TourApiNormalizer {
         } catch (NumberFormatException e) {
             return 0;
         }
+    }
+
+    // ===== U3: 상세(detail) 파싱 =====
+
+    private static final Pattern HREF = Pattern.compile("href=\"([^\"]+)\"", Pattern.CASE_INSENSITIVE);
+
+    /** detailCommon2 항목 → TourCommon (개요/홈페이지/이미지/좌표). */
+    public TourCommon toCommon(JsonNode raw) {
+        String addr1 = nullIfBlank(text(raw, "addr1"));
+        String addr2 = nullIfBlank(text(raw, "addr2"));
+        String address = addr2 == null ? addr1 : (addr1 == null ? addr2 : addr1 + " " + addr2);
+        return new TourCommon(
+                nullIfBlank(text(raw, "contentid")),
+                nullIfBlank(text(raw, "title")),
+                parseInt(text(raw, "contenttypeid")),
+                nullIfBlank(text(raw, "overview")),
+                extractHref(nullIfBlank(text(raw, "homepage"))),
+                nullIfBlank(text(raw, "firstimage")),
+                nullIfBlank(text(raw, "tel")),
+                address,
+                parseCoordinate(text(raw, "mapy")),
+                parseCoordinate(text(raw, "mapx"))
+        );
+    }
+
+    /**
+     * detailIntro2 항목 → TourIntro. contentTypeId별 필드가 다름(BR-U3-6):
+     * 12(관광지)=usetime/restdate/parking/infocenter, 39(음식점)=opentimefood/restdatefood/parking/infocenterfood.
+     * 그 외 타입은 businessHours 등을 시도하지 않고 null (미매핑 WARN).
+     */
+    public TourIntro toIntro(JsonNode raw, int contentTypeId) {
+        return switch (contentTypeId) {
+            case 12 -> new TourIntro(
+                    nullIfBlank(text(raw, "usetime")),
+                    nullIfBlank(text(raw, "restdate")),
+                    nullIfBlank(text(raw, "parking")),
+                    nullIfBlank(text(raw, "infocenter")));
+            case 39 -> new TourIntro(
+                    nullIfBlank(text(raw, "opentimefood")),
+                    nullIfBlank(text(raw, "restdatefood")),
+                    nullIfBlank(text(raw, "parkingfood")),
+                    nullIfBlank(text(raw, "infocenterfood")));
+            default -> {
+                // BR-U3-6: 미매핑 타입 → businessHours 등 null + WARN(신규 타입 인지)
+                log.warn("TourAPI detailIntro2 unmapped contentTypeId={} -> businessHours null", contentTypeId);
+                yield new TourIntro(null, null, null, null);
+            }
+        };
+    }
+
+    /** homepage 필드의 &lt;a href="..."&gt; 에서 URL만 추출. 태그 없으면 원문 반환. */
+    private String extractHref(String homepage) {
+        if (homepage == null) {
+            return null;
+        }
+        Matcher m = HREF.matcher(homepage);
+        return m.find() ? m.group(1) : homepage;
     }
 
     private String text(JsonNode node, String field) {

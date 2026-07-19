@@ -12,11 +12,11 @@ U2의 비즈니스 로직/도메인 모델/규칙을 확정하기 위한 **계�
 ---
 
 ## Part A. 실행 체크리스트
-- [ ] 유닛 컨텍스트 분석 (스토리/컴포넌트/데이터)
-- [ ] 결정 질문 수집(Part B)
-- [ ] `business-logic-model.md` — 지역/코스 조회 흐름, 시드 적재
-- [ ] `business-rules.md` — 필터/거리분류/매핑/404 규칙
-- [ ] `domain-entities.md` — Course 엔티티/DTO, Region 응답
+- [x] 유닛 컨텍스트 분석 (스토리/컴포넌트/데이터)
+- [x] 결정 질문 수집(Part B)
+- [x] `business-logic-model.md` — 지역/코스 조회 흐름, 시드 적재
+- [x] `business-rules.md` — 필터/거리분류/매핑/404 규칙
+- [x] `domain-entities.md` — Course 엔티티/DTO, Region 응답
 
 ---
 
@@ -30,7 +30,7 @@ B) **정규화** — Course + CoursePoint + Waypoint 자식 테이블(조인)
 C) **DB 미사용** — 기동 시 courses.json을 메모리 로드해 서빙(읽기전용이라 충분, CourseRepository/Loader는 인메모리 구현)
 X) Other
 
-[Answer]:
+[Answer]: A
 
 ---
 
@@ -42,7 +42,7 @@ B) **declaredCategory(선언)** 사용
 C) 둘 다 저장, 응답/필터엔 measured
 X) Other
 
-[Answer]:
+[Answer]: C
 
 ---
 
@@ -53,7 +53,7 @@ A) **CourseDataLoader가 적재 시 코드/enum으로 변환**해 저장(조회�
 B) 조회 응답 시 변환(원본 한글 저장)
 X) Other
 
-[Answer]:
+[Answer]: A
 
 ---
 
@@ -65,7 +65,7 @@ B) **최초 1회만** — 이미 있으면 스킵(기존 보존)
 C) **전량 삭제 후 재적재** — 매 기동 초기화
 X) Other
 
-[Answer]:
+[Answer]: B
 
 ---
 
@@ -76,7 +76,7 @@ A) **RegionCatalog/Region enum에 표시명 추가** — U1-a RegionCatalog을 �
 B) 별도 설정/DB 테이블로 관리
 X) Other
 
-[Answer]:
+[Answer]: A
 
 ---
 
@@ -87,7 +87,7 @@ A) **내부 저장만(응답 비노출)** — 용도 확정 시 노출, 데이�
 B) **적재 제외** — 저장하지 않음
 X) Other
 
-[Answer]:
+[Answer]: A
 
 ---
 
@@ -99,7 +99,7 @@ B) 이름 가나다순
 C) courses.json 원본 순서 유지
 X) Other
 
-[Answer]:
+[Answer]: A
 
 ---
 
@@ -110,11 +110,11 @@ A) **400 오류**(VALIDATION_ERROR/BAD_REQUEST) — 지원하지 않는 값 명�
 B) 잘못된 필터는 무시하고 전체/유효필터만 적용
 X) Other
 
-[Answer]:
+[Answer]: A
 
 ---
 
 ## Part C. 생성할 산출물
-- [ ] `aidlc-docs/construction/u2-region-course/functional-design/business-logic-model.md`
-- [ ] `aidlc-docs/construction/u2-region-course/functional-design/business-rules.md`
-- [ ] `aidlc-docs/construction/u2-region-course/functional-design/domain-entities.md`
+- [x] `aidlc-docs/construction/u2-region-course/functional-design/business-logic-model.md`
+- [x] `aidlc-docs/construction/u2-region-course/functional-design/business-rules.md`
+- [x] `aidlc-docs/construction/u2-region-course/functional-design/domain-entities.md`

@@ -8,8 +8,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.List;
 
@@ -36,6 +38,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException ex) {
         return build(ErrorCode.BAD_REQUEST, ex.getMessage(), null);
+    }
+
+    /** 필수 파라미터 누락 → 400, VALIDATION_ERROR. */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingParam(MissingServletRequestParameterException ex) {
+        List<ErrorDetail> details = List.of(new ErrorDetail(ex.getParameterName(), "필수 파라미터가 누락되었습니다."));
+        return build(ErrorCode.VALIDATION_ERROR, ErrorCode.VALIDATION_ERROR.defaultMessage(), details);
+    }
+
+    /** 파라미터 타입 불일치(예: 숫자 자리에 문자) → 400, VALIDATION_ERROR. */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        List<ErrorDetail> details = List.of(new ErrorDetail(ex.getName(), "값의 형식이 올바르지 않습니다."));
+        return build(ErrorCode.VALIDATION_ERROR, ErrorCode.VALIDATION_ERROR.defaultMessage(), details);
     }
 
     /** 권한 없음 → 403, FORBIDDEN. */

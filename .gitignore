@@ -54,7 +54,28 @@ logs/
 
 ### Env ###
 .env
+.env.*
+!.env.example
 .env.local
+
+### Secrets (실제 시크릿은 절대 커밋 금지) ###
+# Spring profile 시크릿 파일 (실제 DB 비번/TourAPI 키/JWT 시크릿)
+application-secret.properties
+application-secret.yml
+application-secret.yaml
+**/application-secret.*
+*-secret.properties
+# 키/인증서
+*.pem
+*.key
+*.jks
+*.p12
+*.keystore
+credentials.json
+serviceAccount*.json
+
+### Local dev only (로컬 전용, 공유 불필요) ###
+dallyeo-postman-collection.json
 
 ### Claude Code (AI-DLC) ###
 .claude/settings.local.json

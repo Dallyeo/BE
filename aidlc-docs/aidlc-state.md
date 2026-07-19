@@ -3,7 +3,7 @@
 ## Project Information
 - **Project Type**: Brownfield
 - **Start Date**: 2026-07-05T00:00:00Z
-- **Current Stage**: CONSTRUCTION - Unit U2 (지역·코스조회 🌐) - Functional Design (Part 1 질문; 답변 대기)
+- **Current Stage**: CONSTRUCTION - Unit U3 (장소·배지 🌐) - COMPLETE (승인 대기 → 다음 유닛 U4)
 
 ## Workspace State
 - **Existing Code**: Yes
@@ -64,12 +64,22 @@
 
 ### 다음 유닛/단계
 **U2 지역·코스조회 🌐 (진행 중)**
-- [ ] Functional Design (U2) - IN PROGRESS (Part 1 질문; 답변 대기)
-- [ ] NFR Requirements/Design (U2) - 평가 예정
-- [ ] Infrastructure Design (U2) - 평가 예정
-- [ ] Code Generation (U2) - 대기
-- [ ] Unit U3 (장소·배지 🌐) - 대기
-- [ ] Unit U4 (인증·사용자 🔒, U1-b 포함) - 대기
+- [x] Functional Design (U2) - COMPLETE (승인 대기) — Course JSON컬럼 엔티티, measured 기준, 멱등 시드, RegionCatalog 표시명 확장
+- [x] NFR Requirements (U2, light) - COMPLETE (승인 대기) — 캐시 미적용, region/measured 인덱스, JSON TEXT 컬럼, U1-a 상속
+- [x] NFR Design (U2, light) - COMPLETE (승인 대기) — @Convert 컨버터 3종, waypointCount 컬럼, 인덱스
+- [x] Infrastructure Design (U2, light) - COMPLETE (승인 대기) — MySQL 활성/ddl-auto=update, classpath 시드
+- [x] Code Generation (U2) - COMPLETE (승인 대기) — Region/Course 레이어 17 java 파일 + 시드 리소스; compile+단위테스트 통과
+
+**U2 지역·코스조회 🌐 전체 완료 → 승인 시 다음 유닛 U3**
+**U3 장소·배지 🌐 (진행 중)**
+- [x] Functional Design (U3) - COMPLETE (승인 대기) — 4엔드포인트, common→intro 순차, 배지 정규화 exact(업소명+주소 둘 다), 군산·요식업만, 캐싱
+- [x] NFR Requirements (U3) - COMPLETE (승인 대기) — 엔드포인트별 서킷+캐시, 배지 복합인덱스, CSV 파일별 인코딩(UTF-8/EUC-KR)
+- [x] NFR Design (U3) - COMPLETE (승인 대기) — 보수적 정규화, Assembler가 배지 부착, 엔드포인트별 서킷 확장
+- [x] Infrastructure Design (U3, light) - COMPLETE (승인 대기) — badge 테이블 활성, CSV classpath, TourAPI egress 실사용
+- [x] Code Generation (U3) - COMPLETE (승인 대기) — place/badge 20+ java, TourApiClient 4오퍼레이션 확장, CSV 2종; compile+단위테스트 통과(배지 97건 적재 검증)
+
+**U3 장소·배지 🌐 전체 완료 → 승인 시 다음 유닛 U4(인증·사용자, U1-b 포함)**
+- [ ] Unit U4 (인증·사용자 🔒, U1-b 포함) - per-unit loop 대기 (다음)
 - [ ] Unit U5 (러닝기록·코스생성 🔒) - 대기
 - [ ] Build and Test - 전 유닛 완료 후 EXECUTE
 
