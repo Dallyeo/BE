@@ -33,6 +33,14 @@ dependencies {
     //Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
+    //Resilience4j (외부 TourAPI 회복성: 재시도/서킷브레이커) — U1-a
+    // NOTE(호환성): Spring Boot 4.0.x 기준 resilience4j 호환 버전은 Build & Test에서 확인·고정.
+    // resilience4j-spring-boot3 가 spring-boot-starter-aop(aspectjweaver)를 전이 의존으로 포함.
+    implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.2.0'
+
+    // JWT(jjwt)는 U1-b(인증)에서 추가. U1-a는 인증 로직 없음.
+    // implementation 'io.jsonwebtoken:jjwt-api:0.12.x' (U1-b)
+
     //Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
@@ -43,6 +51,8 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-jdbc-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    // 외부 TourAPI 목킹(단위/통합 테스트)
+    testImplementation 'org.wiremock:wiremock-standalone:3.9.1'
     testCompileOnly 'org.projectlombok:lombok'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testAnnotationProcessor 'org.projectlombok:lombok'
