@@ -33,6 +33,9 @@ dependencies {
     //Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
+    //Actuator (헬스체크 — 블루-그린 무중단 배포 스위치 판단용)
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
     //Resilience4j (외부 TourAPI 회복성: 재시도/서킷브레이커) — U1-a
     // NOTE(호환성): Spring Boot 4.0.x 기준 resilience4j 호환 버전은 Build & Test에서 확인·고정.
     // resilience4j-spring-boot3 가 spring-boot-starter-aop(aspectjweaver)를 전이 의존으로 포함.

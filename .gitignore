@@ -65,6 +65,9 @@ application-secret.yml
 application-secret.yaml
 **/application-secret.*
 *-secret.properties
+# 배포 시크릿(EnvironmentFile) — .example 템플릿만 커밋
+dallyeo.env
+deploy/dallyeo.env
 # 키/인증서
 *.pem
 *.key

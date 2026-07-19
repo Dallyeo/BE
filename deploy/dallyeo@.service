@@ -1,0 +1,23 @@
+# systemd 템플릿 유닛 — 포트별 인스턴스(블루-그린).
+#   설치: /etc/systemd/system/dallyeo@.service
+#   실행: sudo systemctl start dallyeo@8080  /  dallyeo@8081  (%i = 포트)
+# 각 포트는 /opt/dallyeo/app-<포트>.jar 를 실행(배포 시 심볼릭 링크로 새 버전 지정).
+[Unit]
+Description=Dallyeo API (port %i)
+After=network.target mysql.service redis.service
+
+[Service]
+Type=simple
+User=dallyeo
+# 시크릿(DB 비번/TourAPI 키/JWT 시크릿)은 이 파일에서 주입. git에 올리지 말 것.
+EnvironmentFile=/etc/dallyeo/dallyeo.env
+ExecStart=/usr/bin/java -jar /opt/dallyeo/app-%i.jar --server.port=%i
+SuccessExitStatus=143
+# 그레이스풀 셧다운: SIGTERM 후 진행 중 요청 마무리 대기
+KillSignal=SIGTERM
+TimeoutStopSec=40
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
