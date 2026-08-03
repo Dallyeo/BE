@@ -3,7 +3,7 @@
 ## Project Information
 - **Project Type**: Brownfield
 - **Start Date**: 2026-07-05T00:00:00Z
-- **Current Stage**: CONSTRUCTION - Unit U3 (장소·배지 🌐) - COMPLETE (승인 대기 → 다음 유닛 U4)
+- **Current Stage**: CONSTRUCTION - Unit U4 (인증·사용자 🔒, U1-b 포함) - COMPLETE (Code Generation 완료, 승인 대기 → 다음 유닛 U5)
 
 ## Workspace State
 - **Existing Code**: Yes
@@ -79,8 +79,15 @@
 - [x] Code Generation (U3) - COMPLETE (승인 대기) — place/badge 20+ java, TourApiClient 4오퍼레이션 확장, CSV 2종; compile+단위테스트 통과(배지 97건 적재 검증)
 
 **U3 장소·배지 🌐 전체 완료 → 승인 시 다음 유닛 U4(인증·사용자, U1-b 포함)**
-- [ ] Unit U4 (인증·사용자 🔒, U1-b 포함) - per-unit loop 대기 (다음)
-- [ ] Unit U5 (러닝기록·코스생성 🔒) - 대기
+**U4 인증·사용자 🔒 (U1-b 포함, 진행 중)**
+- [x] Functional Design (U4) - COMPLETE (approved 2026-08-03) — 결정 Q1=B(Kakao+Apple 실구현) Q2=A(토큰검증,추후 code전환 가능) Q3=A(provider+providerUserId 유니크) Q4=A(닉네임 자동생성) Q5=A(HS256) Q6=A(1세션/회전) Q7=A(하드삭제) Q8=B(onboardingCompleted 플래그). 산출물 3종(domain-entities/business-logic-model/business-rules). U1-b(SecurityConfig deny-by-default+화이트리스트/JwtAuthenticationFilter/JwtProvider/OAuthClient) 통합.
+- [x] NFR Requirements (U4) - COMPLETE (approved 2026-08-03) — Q1=A(nimbus Apple JWK) Q2=A(레이트리밋 미적용) Q3=A(refresh SHA-256 해시) Q4=A(소셜호출 Resilience4j+JWKS캐시) Q5=A(at-rest accepted risk). 의존성: jjwt + nimbus-jose-jwt. 산출물 nfr-requirements/tech-stack-decisions.
+- [x] NFR Design (U4, light) - COMPLETE (approved 2026-08-03) — stateless JWT + deny-by-default 화이트리스트, OAuth 전략어댑터(Kakao RestClient/Apple nimbus JWKS+캐시), refresh 회전+SHA-256 해시, oauth 엔드포인트별 Resilience4j. 산출물 nfr-design-patterns/logical-components.
+- [x] Infrastructure Design (U4, light) - COMPLETE (approved 2026-08-03) — 단일 EC2 코로케이션 상속 + users 테이블(ddl-auto=update, provider+providerUserId 유니크) + Redis refresh(해시,7d)/Apple JWKS 캐시 + 아웃바운드 443(kakao/apple) + 신규 시크릿(JWT_SECRET/APPLE_CLIENT_ID). 산출물 infrastructure-design/deployment-architecture.
+- [x] Code Generation (U4) - COMPLETE (승인 대기) — user/auth/external.oauth 신규 + SecurityConfig(deny-by-default)/RestClientConfig/build.gradle/application.properties/.env.example 수정. jjwt+nimbus. compile+U4 단위테스트 35건 통과. 스토리 US-AUTH-1~5·US-USER-1~3 완료.
+
+**U4 인증·사용자 🔒 전체 완료 → 승인 시 다음 유닛 U5(러닝기록·코스생성) 또는 부팅/통합 검증**
+- [ ] Unit U5 (러닝기록·코스생성 🔒) - per-unit loop 대기 (다음)
 - [ ] Build and Test - 전 유닛 완료 후 EXECUTE
 
 ### 🟡 OPERATIONS PHASE

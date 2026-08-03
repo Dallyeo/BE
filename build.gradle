@@ -41,8 +41,15 @@ dependencies {
     // resilience4j-spring-boot3 가 spring-boot-starter-aop(aspectjweaver)를 전이 의존으로 포함.
     implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.2.0'
 
-    // JWT(jjwt)는 U1-b(인증)에서 추가. U1-a는 인증 로직 없음.
-    // implementation 'io.jsonwebtoken:jjwt-api:0.12.x' (U1-b)
+    //JWT (U1-b/U4) — jjwt HS256 자체 발급/검증.
+    // NOTE(호환성): Spring Boot 4.0.x는 Jackson 3(tools.jackson) 사용. jjwt-jackson은 Jackson 2(com.fasterxml)
+    // databind를 전이 의존으로 가져와 공존한다. 버전 호환은 Build & Test에서 확인·고정.
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+
+    //Apple identity token(RS256) JWKS 검증 — U4
+    implementation 'com.nimbusds:nimbus-jose-jwt:9.48'
 
     //Lombok
     compileOnly 'org.projectlombok:lombok'
