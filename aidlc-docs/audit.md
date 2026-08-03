@@ -651,3 +651,89 @@
 **Context**: CONSTRUCTION - U3 로컬 통합 테스트 성공. 실 TourAPI 연동 버그 4건 수정. U1-a/U2/U3 실환경 동작 실증.
 
 ---
+
+## CONSTRUCTION U4 - 착수 (인증·사용자 🔒, U1-b 포함)
+**Timestamp**: 2026-08-03T00:00:00Z
+**User Input**: "U4 인증·사용자 유닛 이어서 진행해줘"
+**AI Response**: "U4 per-unit 루프 착수. 컨텍스트 로드: unit-of-work.md(U4=auth/user + U1-b JWT/필터/OAuth), story-map(US-AUTH-1~5, US-USER-1~3), auth-classification(deny-by-default+화이트리스트), api-spec-draft §1~2(엔드포인트 6종), component-methods(JwtProvider/AuthService/UserService/OAuthClient), security-baseline. 첫 단계 Functional Design 진행 — 플랜+질문 파일 작성: aidlc-docs/construction/plans/u4-auth-user-functional-design-plan.md"
+**Context**: CONSTRUCTION - U4 Functional Design 시작. 플랜/질문 파일 작성, 사용자 답변 대기.
+
+---
+
+## CONSTRUCTION U4 - Functional Design 답변 수집 및 산출물 생성
+**Timestamp**: 2026-08-03T00:10:00Z
+**User Input**: "답변 완료" (플랜 파일 [Answer] 태그: Q1=B, Q2=A(+나중에 B전환 가능한지 확인요청), Q3=A, Q4=A(+닉네임 생성방식 설명요청), Q5=A, Q6=A, Q7=A, Q8=B)
+**AI Response**: "답변 수집·모호성 분석 완료(블로킹 없음). Q2 확인응답: OAuthClient 인터페이스 추상화로 A→B(authorization code 교환) 전환은 제공자 구현체 내부만 교체하면 되고 Controller/Service/DTO/프론트 계약(authorizationCode 필드) 불변 → 전환 가능. Q4 확인응답: Kakao는 소셜 닉네임 사용, Apple/없으면 자동생성('러너'+랜덤4자리 예 러너3821), 유니크 제약 없음, PATCH로 변경 가능, 컬럼·로직은 만들어두고 노출은 후결정. 결정 반영: Q1=B(Kakao+Apple 실구현), Q8=B(onboardingCompleted 플래그 컬럼). 산출물 3종 생성: domain-entities.md(User 엔티티+Redis refresh+JWT클레임+OAuthUser, provider+providerUserId 유니크, 하드삭제), business-logic-model.md(로그인/가입/갱신회전/로그아웃/프로필PATCH/삭제 흐름 + SecurityConfig deny-by-default 화이트리스트 + JwtAuthenticationFilter + OAuthClient 추상화), business-rules.md(BR-1~8 토큰정책/회전/인가/소셜검증/식별/온보딩/삭제/에러매핑). 플랜 체크박스 갱신."
+**AI Prompt**: "U4 Functional Design 완료. Request Changes 또는 Continue to Next Stage(NFR Requirements)?"
+**Context**: CONSTRUCTION - U4 Functional Design 산출물 생성 완료. GATE: 2-option 승인 대기.
+
+---
+
+## CONSTRUCTION U4 - Functional Design 승인 → NFR Requirements 착수
+**Timestamp**: 2026-08-03T00:20:00Z
+**User Input**: "Continue to Next Stage"
+**AI Response**: "U4 Functional Design 승인. aidlc-state Functional Design(U4) 완료 기록. NFR Requirements(U4) 착수 — 규칙 로드(nfr-requirements.md), U1-a tech-stack(jjwt/RestClient/Resilience4j/Redis/env시크릿) 및 U3 NFR 상속 확인. 첫 인증 유닛이라 보안·회복성 결정 필요. 플랜+질문 파일 작성: aidlc-docs/construction/plans/u4-auth-user-nfr-requirements-plan.md (Apple JWKS 검증 라이브러리, 레이트리밋, refresh 저장형태, 소셜호출 회복성, SECURITY-01 at-rest 스탠스)."
+**Context**: CONSTRUCTION - U4 Functional Design 승인. NFR Requirements 시작, 질문 답변 대기.
+
+---
+
+## CONSTRUCTION U4 - NFR Requirements 답변 수집 및 산출물 생성
+**Timestamp**: 2026-08-03T00:30:00Z
+**User Input**: "작성 완료 =" (플랜 [Answer]: Q1=A, Q2=A, Q3=A, Q4=A, Q5=A — 전부 권장안)
+**AI Response**: "답변 전부 A, 모호성 없음. 산출물 2종 생성: nfr-requirements.md(확장성/성능[하드타깃 미설정]/가용성[소셜호출 Resilience4j+Apple JWKS캐시]/보안 베이스라인 매핑표[SECURITY-01 at-rest accepted risk·03 미로깅·08 deny-by-default·refresh 해시·패스워드 N/A·레이트리밋 defer]/관측성/N-A[SECURITY-04 API-only N/A]), tech-stack-decisions.md(jjwt HS256 + nimbus-jose-jwt Apple JWK + RestClient Kakao조회 + Resilience4j + Redis SHA-256 해시 refresh + 의존성/시크릿 env). 플랜/state 갱신."
+**AI Prompt**: "U4 NFR Requirements 완료. Request Changes 또는 Continue to Next Stage(NFR Design)?"
+**Context**: CONSTRUCTION - U4 NFR Requirements 산출물 생성 완료. GATE: 2-option 승인 대기.
+
+---
+
+## CONSTRUCTION U4 - NFR Requirements 승인 → NFR Design(light) 생성
+**Timestamp**: 2026-08-03T00:40:00Z
+**User Input**: "Continue to Next Stage"
+**AI Response**: "U4 NFR Requirements 승인. NFR Design(U4, light) 진행. 결정(Q1~Q5) 확정으로 신규 블로킹 질문 없음 → U2/U3와 동일 light 방식으로 패턴 문서 직접 확정. 산출물 2종: nfr-design-patterns.md(1.보안[stateless JWT+deny-by-default, jjwt HS256, OAuth 전략어댑터, refresh 회전+SHA-256 해시, 시크릿/로깅 마스킹], 2.회복성[oauth 엔드포인트별 Resilience4j+Apple JWKS 캐시], 3.성능/확장[stateless 수평확장], 4.미적용[레이트리밋/at-rest/블랙리스트 defer], 5.화이트리스트 확정), logical-components.md(SecurityConfig 교체/JwtAuthenticationFilter/JwtProvider/JwtProperties/EntryPoint·AccessDeniedHandler/@AuthUser Resolver/OAuthClient(Kakao·Apple)+Resolver/AppleJwksProvider/RefreshTokenStore/AuthService·UserService·UserRepository/LogMasking·Resilience 확장 + 로그인 상호작용 다이어그램). state 갱신."
+**AI Prompt**: "U4 NFR Design 완료. Request Changes 또는 Continue to Next Stage(Infrastructure Design)?"
+**Context**: CONSTRUCTION - U4 NFR Design(light) 산출물 생성 완료. GATE: 2-option 승인 대기.
+
+---
+
+## CONSTRUCTION U4 - NFR Design 승인 → Infrastructure Design(light) 생성
+**Timestamp**: 2026-08-03T00:50:00Z
+**User Input**: "Continue to Next Stage"
+**AI Response**: "U4 NFR Design 승인. Infrastructure Design(U4, light) 진행 — 기존 단일 EC2 코로케이션 토폴로지 상속, 신규 블로킹 질문 없음(users 테이블/Redis refresh/소셜 egress/시크릿만 추가). 산출물 2종: infrastructure-design.md(논리→물리 매핑[users 테이블 ddl-auto=update+유니크, RefreshTokenStore Redis 해시 7d, Kakao/Apple egress 443, Apple JWKS 캐시], 스토리지/네트워킹[아웃바운드 443 kakao·apple 확장, nginx TLS 종단], 시크릿[JWT_SECRET·APPLE_CLIENT_ID env 신규+.env.example], 배포영향, N/A deferred), deployment-architecture.md(토폴로지 다이어그램+nginx TLS+기동시퀀스[JWT_SECRET fail-fast, users 생성, SecurityConfig 교체]+배포절차+리스크[소셜의존/JWT_SECRET 유출/단일세션]). state 갱신."
+**AI Prompt**: "U4 Infrastructure Design 완료. Request Changes 또는 Continue to Next Stage(Code Generation)?"
+**Context**: CONSTRUCTION - U4 Infrastructure Design(light) 산출물 생성 완료. GATE: 2-option 승인 대기.
+
+---
+
+## CONSTRUCTION U4 - Infra Design 승인 → Code Generation Part 1(플랜)
+**Timestamp**: 2026-08-03T01:00:00Z
+**User Input**: "Continue to Next Stage"
+**AI Response**: "U4 Infrastructure Design 승인. Code Generation Part 1(플랜) 진행. 기존 코드 컨벤션 분석(ApiResponse/BusinessException/ErrorCode/GlobalExceptionHandler/RestClientConfig/TourApiClient resilience annotation/CacheConfig/application.properties/.env.example/test tree). 발견사항: (1) Jackson 3(tools.jackson) → jjwt-jackson(Jackson2) 공존 Build&Test 확인 필요, (2) application.properties jwt.access-expiration=3600000(1h) → 24h(86400000) 교정 필요(US-AUTH-2), (3) .env.example APPLE_CLIENT_ID 추가, (4) refresh는 StringRedisTemplate(캐시매니저 분리), Apple JWKS 인메모리 캐시. 상세 코드생성 플랜 작성: u4-auth-user-code-generation-plan.md — 29 스텝(그룹 A~J: 도메인/토큰/oauth/repo/service/api/보안배선/빌드설정/테스트/문서), 파일 조직(user/auth/external.oauth/config 수정), 스토리 매핑 8종."
+**AI Prompt**: "U4 Code Generation 플랜(29스텝) 검토 요청. 승인하면 Part 2 실행. Request Changes 또는 Continue(플랜 승인)?"
+**Context**: CONSTRUCTION - U4 Code Generation Part 1 플랜 작성 완료. GATE: 플랜 승인 대기.
+
+---
+
+## CONSTRUCTION U4 - Code Generation Part 1 승인 → Part 2 실행 시작
+**Timestamp**: 2026-08-03T01:10:00Z
+**User Input**: "Continue to Next Stage"
+**AI Response**: "U4 코드생성 플랜 승인. Part 2 실행 시작(29스텝). 엔티티 컨벤션 확인 후 그룹 A~J 순차 생성 → compile/단위테스트 → code-summary."
+**Context**: CONSTRUCTION - U4 Code Generation Part 2 시작.
+
+---
+
+## CONSTRUCTION U4 - Code Generation Part 2 완료
+**Timestamp**: 2026-08-03T01:40:00Z
+**User Input**: (Part 1 승인 후 Part 2 실행)
+**AI Response**: "29 스텝 전부 실행. 생성: user(Provider/Gender/User/NicknameGenerator/UserRepository/UserService/UserController + dto 2), auth(JwtProperties/JwtProvider/TokenHasher/RefreshTokenStore/AuthService/AuthController/JwtAuthenticationFilter/EntryPoint/AccessDeniedHandler/SecurityErrorResponder/AuthUser/ArgumentResolver + dto 3), external.oauth(OAuthUser/OAuthClient/OAuthProperties/Kakao/AppleJwksProvider/Apple/Resolver), config(WebConfig). 수정: SecurityConfig(permitAll→deny-by-default+화이트리스트+필터+핸들러), RestClientConfig(kakao/apple RestClient), build.gradle(jjwt 0.12.6 + nimbus 9.48), application.properties(jwt.access 1h→24h 교정, oauth.*, resilience 2인스턴스), .env.example(APPLE_CLIENT_ID). 테스트 8클래스 35건 작성. 검증: compileJava/compileTestJava 성공, U4 단위테스트 35건 전부 통과(0 실패). 설계반영 FD Q1~Q8/NFR Q1~Q5. 스토리 US-AUTH-1~5·US-USER-1~3 완료. code-summary.md 작성. 플랜 29스텝 [x]. GATE: 승인 대기. 유의: Jackson3+jjwt-jackson(Jackson2) 공존 부팅검증은 Build&Test."
+**AI Prompt**: "U4 인증·사용자 코드 생성 완료(35 테스트 통과). 승인하고 다음(U5 러닝기록·코스생성 또는 부팅/통합 검증)로 진행할까요?"
+**Context**: CONSTRUCTION - U4 Code Generation 완료. U4 유닛 전체(설계+코드) 완료. GATE: 2-option 승인 대기.
+
+---
+
+## CONSTRUCTION U4 - Postman 테스트 지원(사후 요청)
+**Timestamp**: 2026-08-03T02:00:00Z
+**User Input**: "지금까지 한 것들에 대해서 설명해주고 내가 postman으로 테스트할 수 있게 만들어줘" + (인증 테스트 방식 질문) "dev 전용 로그인 추가" 선택
+**AI Response**: "지금까지 작업(U1-a/U2/U3/U4) 설명 제공. Postman 컬렉션 생성(Dallyeo.postman_collection.json, 15요청, 토큰 자동저장 스크립트). 인증 엔드포인트 테스트 편의를 위해 사용자 선택에 따라 dev 전용 로그인 추가: DevAuthController(@Profile(\"dev\"), POST /dev/login, 소셜 없이 테스트 사용자 JWT 발급) + DevLoginRequest, SecurityConfig에 /dev/** permitAll(핸들러 dev 전용→prod 404). compileJava 성공, JSON 유효. 실행: SPRING_PROFILES_ACTIVE=dev."
+**Context**: CONSTRUCTION - U4 코드 자체는 변경 없음(테스트 지원 산출물만 추가). dev 로그인은 운영 비활성. U4 승인 대기 유지.
+
+---
