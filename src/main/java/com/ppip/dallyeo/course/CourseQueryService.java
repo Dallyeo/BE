@@ -36,13 +36,13 @@ public class CourseQueryService {
         Course c = courseRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "코스를 찾을 수 없습니다: " + id));
         return new CourseDetail(
-                c.getId(), c.getName(), c.getRegion(), c.getMeasuredCategory(),
+                c.getId(), c.getName(), c.getDescription(), c.getRegion(), c.getMeasuredCategory(),
                 c.getTotalMeters(), c.getPolyline(), c.getCumulativeMeters(), c.getWaypointAnchors());
     }
 
     private CourseSummary toSummary(Course c) {
         return new CourseSummary(
-                c.getId(), c.getName(), c.getRegion(), c.getMeasuredCategory(),
+                c.getId(), c.getName(), c.getDescription(), c.getRegion(), c.getMeasuredCategory(),
                 c.getTotalMeters(), c.getWaypointCount());
     }
 }

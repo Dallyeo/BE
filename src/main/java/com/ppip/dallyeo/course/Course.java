@@ -43,6 +43,10 @@ public class Course {
 
     private String name;
 
+    /** 코스 소개 문구(courses.json description). 목록/상세 응답에 노출. */
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     @Enumerated(EnumType.STRING)
     private Region region;
 

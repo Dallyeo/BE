@@ -1,7 +1,7 @@
 # Dallyeo API 명세 (프론트엔드용)
 
 > 현재까지 구현된 API입니다. 🌐 = 공개(토큰 불필요), 🔒 = 인증 필요.
-> **U1-a/U2/U3(공개 조회) + U4(인증·사용자)** 완료. 러닝기록·코스생성(🔒)은 다음 단계(U5) 예정.
+> **U1-a/U2/U3(공개 조회) + U4(인증·사용자) + U5(러닝 기록) + U6(업적)** 완료. 사용자 코스 생성은 백엔드에 저장하지 않음(프론트/클라이언트 담당) — 사용자가 만든 경로는 러닝 기록의 `polyline`으로 저장됩니다.
 
 - **Base URL**: `https://dallyeo.cloud` (개발 로컬: `http://localhost:8080`)
 - **Content-Type**: `application/json; charset=UTF-8`
@@ -90,6 +90,7 @@ GET /courses?region={GUNSAN|JEONJU}&distance={SHORT|MEDIUM|LONG}
     {
       "id": "jeonju-hanok-village-run",
       "name": "한옥마을 둘레길 코스",
+      "description": "전주 한옥마을 일대를 가볍게 한 바퀴 도는 코스입니다. 곳곳에 자리한 크고 작은 문화유산을 둘러보며 전주의 정취를 느껴보세요.",
       "region": "JEONJU",
       "distanceCategory": "SHORT",
       "totalMeters": 2799,
@@ -112,6 +113,7 @@ GET /courses/{id}
   "data": {
     "id": "jeonju-hanok-village-run",
     "name": "한옥마을 둘레길 코스",
+    "description": "전주 한옥마을 일대를 가볍게 한 바퀴 도는 코스입니다. 곳곳에 자리한 크고 작은 문화유산을 둘러보며 전주의 정취를 느껴보세요.",
     "region": "JEONJU",
     "distanceCategory": "SHORT",
     "totalMeters": 2799,
@@ -342,7 +344,140 @@ DELETE /users/me
 
 ---
 
-## 7. 프론트 연동 시 주의사항
+## 7. 러닝 기록 (Runs) 🔒  — 본인 기록만
+
+> 클라이언트가 추적을 끝낸 **완료 데이터**만 저장합니다(실시간 소켓 없음). 모든 요청에 `Authorization: Bearer {accessToken}` 필요.
+
+### 7.1 러닝 기록 저장
+```
+POST /runs
+```
+**Request Body**
+```json
+{
+  "courseId": "gunsan-modern-history-run | null",
+  "polyline": [ { "lat": 35.95, "lng": 126.68 } ],
+  "distanceMeters": 10480,
+  "durationSeconds": 3600,
+  "averagePaceSeconds": 343,
+  "startedAt": "2026-07-09T07:00:00Z",
+  "finishedAt": "2026-07-09T08:00:00Z"
+}
+```
+- `courseId`: 시드(공식) 코스를 달렸으면 참조, 자유 러닝/직접 만든 경로면 `null`. 존재 검증은 하지 않습니다.
+- `polyline` 비어있음 / `distanceMeters`·`durationSeconds` ≤ 0 / 필수 필드 누락 / `finishedAt < startedAt` → **400**
+
+**Response 201**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "courseId": "gunsan-modern-history-run | null",
+    "courseName": "근대 역사 박물관 런 | null",
+    "polyline": [ { "lat": 35.95, "lng": 126.68 } ],
+    "distanceMeters": 10480,
+    "durationSeconds": 3600,
+    "averagePaceSeconds": 343,
+    "startedAt": "2026-07-09T07:00:00Z",
+    "finishedAt": "2026-07-09T08:00:00Z"
+  }
+}
+```
+> `completionRate`(완주율)는 아직 계산하지 않습니다(응답에서 생략). 계산 기준 확정 후 추가 예정.
+
+### 7.2 러닝 기록 목록 조회
+```
+GET /runs?from={ISO date}&to={ISO date}
+```
+- 본인 기록만 반환. `from`/`to`(예: `2026-07-01`)는 선택 — `finishedAt` 기준으로 필터, **최신순** 정렬.
+- 잘못된 날짜 형식 → **400**. 목록 응답은 경량(**polyline 미포함**).
+
+**Response 200**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "courseName": "근대 역사 박물관 런 | null",
+      "distanceMeters": 10480,
+      "durationSeconds": 3600,
+      "finishedAt": "2026-07-09T08:00:00Z"
+    }
+  ]
+}
+```
+
+### 7.3 러닝 기록 상세 조회
+```
+GET /runs/{id}
+```
+- 본인 기록만. 타인의 기록이거나 존재하지 않으면 **404**.
+- **Response 200** — 7.1 응답과 동일 구조(`polyline` 포함).
+
+---
+
+## 8. 업적 (Achievements) 🔒  — 본인 기준
+
+> 러닝 기록을 기반으로 달성되는 업적(고정 8종). 판정 기준은 **완주한 코스(run.courseId)** — 자유 러닝(courseId 없음)은 집계에서 제외. 모든 요청에 `Authorization: Bearer {accessToken}` 필요.
+
+### 업적 코드 목록
+| code | 업적명 | 달성 조건 |
+|---|---|---|
+| `GUNSAN_BEGINNER` | 군산 초보 러너 | 군산 코스로 러닝 1회 이상 |
+| `JJAMPPONG` | 짬뽕을 먹을 자격이 있는 자 | 군산 짬뽕거리 코스 완주 |
+| `GUNSAN_CONQUEROR` | 군산 런트립 정복자 | 군산 추천 코스 전부 완주 |
+| `JEONJU_BEGINNER` | 전주 초보 러너 | 전주 코스로 러닝 1회 이상 |
+| `JEONJU_CONQUEROR` | 전주 런트립 정복자 | 전주 추천 코스 전부 완주 |
+| `JEONJU_PILGRIM` | 전주 성지순례자 | 전주 천주교 성지 코스 완주 |
+| `NATURE_LOVER` | 자연을 사랑해! | 군산 편백나무 숲 코스 완주 |
+| `BETWEEN_WAVES` | 부숴지는 파도를 사이에서 | 군산 새만금 방파제 코스 완주 |
+
+> 업적은 `POST /runs`로 러닝을 저장할 때 **서버가 자동으로 판정·달성**합니다. 저장 후 목록(8.1)으로 새 달성 여부를 확인하세요.
+
+### 8.1 업적 목록 조회
+```
+GET /achievements
+```
+- 전체 8종 + 본인 달성 여부/일시.
+
+**Response 200**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "code": "JJAMPPONG",
+      "name": "짬뽕을 먹을 자격이 있는 자",
+      "description": "군산 짬뽕거리 코스를 완주한 사람",
+      "unlocked": true,
+      "unlockedAt": "2026-07-09T07:35:10Z"
+    },
+    {
+      "code": "GUNSAN_CONQUEROR",
+      "name": "군산 런트립 정복자",
+      "description": "군산의 모든 추천 코스를 완주한 사람",
+      "unlocked": false,
+      "unlockedAt": null
+    }
+  ]
+}
+```
+
+### 8.2 업적 수동 달성
+```
+POST /achievements/{code}/unlock
+```
+- 특정 업적을 수동으로 달성 요청. 서버가 조건을 재판정합니다.
+- 조건 충족 → 달성(8.1 항목 구조 반환). 이미 달성 → 그대로 반환(멱등).
+- 조건 미충족 → **409**, 없는 code → **404**.
+
+**Response 200** — 해당 업적 항목(`unlocked: true`).
+
+---
+
+## 9. 프론트 연동 시 주의사항
 
 1. **응답은 항상 `{success, data|error}` 래퍼** — `data`/`error`를 먼저 분기.
 2. **null 필드 존재** — 장소의 `latitude/longitude/thumbnailUrl/businessHours/imageUrl/distanceMeters`는 상황에 따라 `null`. UI에서 방어 처리 필요.
@@ -355,14 +490,16 @@ DELETE /users/me
 
 ---
 
-## 8. 아직 미구현(다음 단계 예정)
+## 10. 아직 미구현(다음 단계 예정)
 
 | 기능 | 상태 |
 |---|---|
 | 소셜 로그인 / 토큰 발급·갱신 (🔒) | ✅ **U4 완료** |
 | 사용자 프로필·온보딩·탈퇴 (🔒) | ✅ **U4 완료** |
-| 러닝 기록 CRUD `POST/GET /runs` (🔒) | U5 예정 |
-| 사용자 코스 생성 `POST /courses` (🔒) | U5 예정 |
+| 러닝 기록 저장·목록·상세 `POST/GET /runs` (🔒) | ✅ **U5 완료** |
+| 업적 목록·달성 `GET /achievements`, `POST /achievements/{code}/unlock` (🔒) | ✅ **U6 완료** |
+| 사용자 코스 생성 `POST /courses` (🔒) | 백엔드 저장 안 함(프론트 담당) — 러닝 `polyline`으로 보관 |
+| 러닝 기록 수정·삭제 / 완주율·통계 / 업적 진행률 | 후속(백로그) |
 | 장소 상세 부가정보/이미지 갤러리 | 후속 |
 
 > 🔒 엔드포인트는 `Authorization: Bearer {token}` 헤더가 필요합니다. 공개 API는 그대로 유지됩니다.

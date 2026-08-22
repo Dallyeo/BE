@@ -27,7 +27,7 @@ class CourseControllerTest {
     @Test
     void list_validFilters_delegates() {
         when(service.findSummaries(eq(Region.GUNSAN), eq(CourseDistance.MEDIUM)))
-                .thenReturn(List.of(new CourseSummary("id", "n", Region.GUNSAN, CourseDistance.MEDIUM, 100, 3)));
+                .thenReturn(List.of(new CourseSummary("id", "n", "설명", Region.GUNSAN, CourseDistance.MEDIUM, 100, 3)));
 
         ApiResponse<List<CourseSummary>> res = controller.list("GUNSAN", "MEDIUM");
 
