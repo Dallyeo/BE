@@ -11,6 +11,7 @@ import java.util.List;
 public record CourseDetail(
         String id,
         String name,
+        String description,
         Region region,
         CourseDistance distanceCategory,
         int totalMeters,

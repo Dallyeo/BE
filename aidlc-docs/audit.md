@@ -737,3 +737,115 @@
 **Context**: CONSTRUCTION - U4 코드 자체는 변경 없음(테스트 지원 산출물만 추가). dev 로그인은 운영 비활성. U4 승인 대기 유지.
 
 ---
+
+## CONSTRUCTION U5 - Functional Design 시작
+**Timestamp**: 2026-08-22T00:00:00Z
+**User Input**: "U5 작업 시작해줘" (선행 맥락: "지금까지 작업한 곳 알려줘" → U4 완료, 다음 U5 안내)
+**AI Response**: "U5(러닝기록·코스생성 🔒) Functional Design 착수. 컨텍스트 로드: unit-of-work.md U5 정의(도메인 run + course 생성, RunController/Service/Repository, CourseCommandService, U4 토큰 소유권 전제), story-map(US-RUN-1/2/3 + US-COURSE-3), api-spec-draft §4.3/§5, 기존 Course 엔티티(String id, JSON @Convert 컬럼)/User 엔티티(Long id)/AuthUser 파라미터 주입/ApiResponse/BusinessException 관례 확인. functional-design-plan(체크박스+[Answer] 질문) 작성 예정."
+**Context**: CONSTRUCTION - U5 진입. Functional Design Part 1(계획+질문) 작성 단계.
+
+---
+
+## CONSTRUCTION U5 - Functional Design 완료 (승인 대기)
+**Timestamp**: 2026-08-22T00:30:00Z
+**User Input**: (AskUserQuestion 4문항 응답) Q3=본인 전용(ownerId, 공개목록 시드만) / Q6=완주율 계산 안 함 / Q7=courseId 느슨 저장 / Q9=averagePace 클라이언트 값 저장. 나머지 Q1/Q2/Q4/Q5/Q8/Q10/Q11은 추천 기본값 채택.
+**AI Response**: "U5 Functional Design 산출물 3종 작성: domain-entities.md(Run 신규 엔티티 Long id + userId/courseId 스칼라 + polyline JSON, completionRate 미저장; Course에 ownerId nullable 추가, 시드=null 공개/사용자코스=owner), business-logic-model.md(6흐름: 러닝 저장/목록/상세, 사용자 코스 생성, 코스 상세 소유권 판정, 목록 ownerId IS NULL 필터), business-rules.md(BR-U5-1~12: 인증·소유권·검증·완주율보류·범위). 결정: Run id=Long IDENTITY, 사용자 코스 id='user-'+UUID, measuredCategory는 U2에 거리분류 로직 없어 U5 신규 CourseDistance.classifyByMeters(<5k/5-10k/>10k) 정의. 소유권 위반은 404(존재 은폐). 검증 관례 ErrorCode(BAD_REQUEST/UNAUTHORIZED/NOT_FOUND) 재사용 확인. 플랜 Step1~6 [x]."
+**AI Prompt**: "U5 Functional Design 완료. 검토 후 Request Changes 또는 Continue to Next Stage(다음: NFR Requirements) 선택해주세요."
+**Context**: CONSTRUCTION - U5 Functional Design 완료. GATE: 2-option 승인 대기.
+
+---
+
+## CONSTRUCTION U5 - 범위 변경(사용자 코스 저장 제거) 및 Functional Design 갱신
+**Timestamp**: 2026-08-22T00:45:00Z
+**User Input**: "내가 찾아보니깐 기록은 저장하는게 맞는데 그 사용자가 직접 만드는 코스는 저장을 하지 않아. 그래서 저장 방식도 좀 다르게 해야될것 같은데" + (AskUserQuestion 응답) "POST /courses 자체 제거" 선택.
+**AI Response**: "U5 범위 변경 확정: US-COURSE-3(사용자 코스 생성) 백엔드 제거. 사용자 코스는 DB 미저장(프론트/클라이언트 책임), 사용자가 만든 경로는 러닝 기록 polyline으로만 잔존. Course(U2) 엔티티/조회 변경 없음(ownerId 추가 취소, CourseCommandService/POST /courses 미생성, classifyByMeters 불필요). Functional Design 산출물 3종 재작성: domain-entities(Run만, Course '변경없음' 섹션), business-logic-model(흐름 1~3 러닝 저장/목록/상세만; 코스 생성/소유권/목록필터 흐름 삭제), business-rules(BR-U5-1/2/5/6/7/8/9/12만 잔존; 코스 소유권·생성검증 BR 삭제, 소유권 위반은 404 은폐 유지). 계획서 헤더에 범위변경 명기, Q2~Q5 취소선 무효 처리. aidlc-state 갱신. 러닝 관련 결정 유지: Run id=Long IDENTITY, courseId 느슨(시드 참조), 완주율 미계산, averagePace 클라값, finishedAt 최신순."
+**AI Prompt**: "U5 범위 축소 반영 완료(run 도메인만). Functional Design 재확정. 검토 후 Request Changes 또는 Continue to Next Stage(NFR Requirements) 선택해주세요."
+**Context**: CONSTRUCTION - U5 Functional Design 재작성(범위 축소). GATE: 2-option 승인 대기.
+
+---
+
+## CONSTRUCTION U5 - Functional Design 승인 & NFR Requirements 완료
+**Timestamp**: 2026-08-22T01:00:00Z
+**User Input**: "Continue to Next Stage" (U5 Functional Design 승인) + (NFR AskUserQuestion 응답) NQ1=상한 없음(defer), NQ2=페이징 없음(defer).
+**AI Response**: "U5 Functional Design 승인 기록. NFR Requirements(light) 진행: 대부분 U1-a/U4 상속, run 도메인은 인증 소유자 전용 CRUD로 신규 외부호출/시크릿/기술스택 없음. 결정 NQ1=polyline 상한 없음(단 컬럼 MEDIUMTEXT로 절단 방지 안전장치), NQ2=목록 페이징 없음(polyline 제외 경량 요약, 백로그), NQ3=신규 스택 없음. 산출물 2종: nfr-requirements.md(확장성/성능(userId,finishedAt 인덱스)/신뢰성(MEDIUMTEXT)/보안 Security Baseline SECURITY-05·08·03·15·01·12 매핑, 소유권 404 은폐, 위치정보 프라이버시-polyline 미로깅)/관측성/N-A·defer), tech-stack-decisions.md(전부 상속, 신규 의존성·시크릿·외부연동 없음). 계획서 u5-run-nfr-requirements-plan.md 작성, 체크박스 완료."
+**AI Prompt**: "U5 NFR Requirements 완료. 검토 후 Request Changes 또는 Continue to Next Stage(NFR Design) 선택해주세요."
+**Context**: CONSTRUCTION - U5 Functional Design 승인 → NFR Requirements 완료. GATE: 2-option 승인 대기.
+
+---
+
+## CONSTRUCTION U5 - NFR Requirements 승인 & NFR Design 완료
+**Timestamp**: 2026-08-22T01:15:00Z
+**User Input**: "Continue to Next Stage" (U5 NFR Requirements 승인)
+**AI Response**: "U5 NFR Requirements 승인 기록. NFR Design(light) 진행: 신규 인프라 패턴 없음(서킷/캐시/외부호출/큐 부재), 표준 JPA 3계층. 미결 질문 없음(FD/NFR-Req 확정) → 질문 생략. 산출물 2종: nfr-design-patterns.md(보안=deny-by-default 상속·소유권 404 은폐·입력검증·위치정보 polyline 미로깅 / 성능=(userId,finishedAt) 인덱스·경량 목록 프로젝션 polyline 제외·MEDIUMTEXT·courseName best-effort / 회복성=외부의존 없어 서킷 미적용 / 트랜잭션·예외 상속), logical-components.md(신규 7파일: Run·RunRepository·RunService·RunController·RunCreateRequest·RunSummaryResponse·RunDetailResponse; 재사용 Course/AuthUser/Converter/ExceptionHandler; 상호작용 다이어그램; RunRepository 단일 @Query 권장). 경계 노트: 계정 하드삭제 시 runs cascade 정책은 U5 범위 밖(러닝 삭제 defer)로 후속 확인 필요 명시. 계획서 u5-run-nfr-design-plan.md."
+**AI Prompt**: "U5 NFR Design 완료. 검토 후 Request Changes 또는 Continue to Next Stage(Infrastructure Design) 선택해주세요."
+**Context**: CONSTRUCTION - U5 NFR Requirements 승인 → NFR Design 완료. GATE: 2-option 승인 대기.
+
+---
+
+## CONSTRUCTION U5 - NFR Design 승인 & Infrastructure Design 완료
+**Timestamp**: 2026-08-22T01:30:00Z
+**User Input**: "Continue to Next Stage" (U5 NFR Design 승인)
+**AI Response**: "U5 NFR Design 승인 기록. Infrastructure Design(light) 진행: 기존 단일 EC2 코로케이션 토폴로지 전면 상속, 신규 인프라 사실상 없음 — 기존 MySQL에 run 테이블 1개만 추가(ddl-auto=update, idx_run_user_finished, polyline MEDIUMTEXT). Redis 미사용(U5), 신규 egress/시크릿/포트/의존성 없음. 미결 질문 없음 → 생략. 산출물 2종: infrastructure-design.md(컴포넌트→인프라 매핑, 스토리지 MEDIUMTEXT, 네트워킹 무변경, 시크릿 무변경, 공유인프라 무변경으로 shared 파일 불필요), deployment-architecture.md(토폴로지 변화점=run 테이블만, 기동시퀀스, 경량 배포절차, 리스크: polyline 대용량/무페이징/계정삭제 cascade 고아레코드 후속검토). 계획서 u5-run-infrastructure-design-plan.md."
+**AI Prompt**: "U5 Infrastructure Design 완료. 검토 후 Request Changes 또는 Continue to Next Stage(Code Generation) 선택해주세요."
+**Context**: CONSTRUCTION - U5 NFR Design 승인 → Infrastructure Design 완료. GATE: 2-option 승인 대기.
+
+---
+
+## CONSTRUCTION U5 - Infrastructure Design 승인 & Code Generation Part 1(계획)
+**Timestamp**: 2026-08-22T01:45:00Z
+**User Input**: "Continue to Next Stage" (U5 Infrastructure Design 승인)
+**AI Response**: "U5 Infrastructure Design 승인 기록. Code Generation Part 1(계획) 작성: 기존 코드 관례 확인(DTO=record+jakarta validation, ApiResponse.success, 201=@ResponseStatus CREATED, @AuthUser Long, Mockito/AssertJ 단위테스트, PolylineConverter/CourseRepository 재사용). 신규 패키지 run/(Run, RunRepository, RunService, RunController, dto 3종). 10스텝 플랜(엔티티→리포지토리→DTO→서비스→컨트롤러→테스트→컴파일검증→코드요약→API.md→Postman). classifyByMeters 불필요(코스생성 제거). 변경없음: SecurityConfig(deny-by-default 자동)/build.gradle(신규 의존성 없음)/application.properties/Course/User. 스토리 US-RUN-1/2/3 매핑. 플랜=u5-run-code-generation-plan.md."
+**AI Prompt**: "U5 Code Generation 계획(Part 1) 완료. 10스텝(run 도메인 7 java + 테스트 2 + 문서). 이 계획을 승인하면 Part 2(코드 생성)를 실행합니다. 승인 또는 변경요청?"
+**Context**: CONSTRUCTION - U5 Infra 승인 → Code Generation Part 1 계획 완료. GATE: 계획 승인 대기.
+
+---
+
+## CONSTRUCTION U5 - Code Generation Part 1 승인 & Part 2(생성) 완료
+**Timestamp**: 2026-08-22T02:00:00Z
+**User Input**: "승인" (U5 Code Generation 계획 승인)
+**AI Response**: "U5 Code Generation Part 2 실행. 신규 7 java(run/: Run 엔티티[Long IDENTITY, userId, courseId nullable, polyline MEDIUMTEXT+PolylineConverter, (userId,finishedAt) 인덱스, @PrePersist createdAt], RunRepository[findByOwnerAndPeriod 기간 optional finishedAt DESC], RunService[save 검증·userId귀속, list 격리·ISO date 파싱, getDetail 소유권 404, courseName best-effort, completionRate null], RunController[/runs POST 201·GET·GET{id}, @AuthUser], dto: RunCreateRequest[@NotEmpty/@Positive/@NotNull]·RunSummaryResponse[polyline 제외]·RunDetailResponse[polyline 포함]). 테스트 2(RunServiceTest 8 + RunControllerTest 3). 문서 수정: API.md §7 Runs 추가+미구현표 갱신(코스생성=프론트), Postman Runs 폴더 3요청(runId 캡처 스크립트)+컬렉션명. 변경없음: SecurityConfig/build.gradle/properties/Course/User. 검증: compileJava/compileTestJava 성공, U5 단위테스트 11건 전부 통과(0 실패). code-summary.md 작성. 플랜 10스텝 전부 [x]. 스토리 US-RUN-1/2/3 완료. 부팅/통합검증은 Build&Test."
+**AI Prompt**: "U5 러닝기록 코드 생성 완료(11 테스트 통과). 승인하고 다음(Build & Test — 전 유닛 완료)으로 진행할까요?"
+**Context**: CONSTRUCTION - U5 Code Generation 완료. U5 유닛 전체(설계+코드) 완료. GATE: 2-option 승인 대기.
+
+---
+
+## POST-U5 - 코스 설명(description) 추가 (사용자 요청, U2 확장)
+**Timestamp**: 2026-08-22T02:30:00Z
+**User Input**: "이제 내용 다 적어놨는데 이거를 json에도 넣기는 해야될것 같아" + (AskUserQuestion) 반영범위=API까지 연결, 노출위치=목록+상세 모두.
+**AI Response**: "course-info.md(사용자 편집본)의 설명을 courses.json 10개 코스에 description 필드로 주입(id 라인 뒤 텍스트 삽입, float 정밀도 보존). 배선: Course 엔티티 description(@Column TEXT) 추가, CourseSeed record + toCourse 매핑, CourseSummary/CourseDetail record에 description 추가, CourseQueryService 목록/상세 매핑 갱신. 테스트 CourseControllerTest 생성자 인자 보정. API.md 3.1/3.2 예시에 description 추가. 검증: compileJava/compileTestJava 성공, course 테스트 15건 통과. 유의: CourseDataLoader는 id 존재 시 스킵(멱등, Q4=B) → 기존 시드된 DB에는 description 백필 안 됨(재시드 또는 로더 update 필요)."
+**Context**: POST-U5 데이터/기능 추가. U2 코스 도메인 확장. 부팅 시 기존 DB 백필 이슈 사용자에 안내 예정."
+
+---
+
+## CONSTRUCTION U5 - Code Generation 승인 & Build&Test 진입
+**Timestamp**: 2026-08-22T03:00:00Z
+**User Input**: "확인됐어, 이제 U5 승인하고 Build & Test로 가자" (코스 description DB 백필 확인 완료 후)
+**AI Response**: "U5 Code Generation 승인 기록 → U5 유닛 전체 완료. 모든 유닛(U1-a~U5) 코드 완료. 별도로 코스 description 기능(U2 확장) 추가 및 DB 백필(update-course-description.sql) 완료. Build & Test 단계 진입: 전체 빌드+전 유닛 테스트 실행, 지시 문서 5종 생성."
+**Context**: CONSTRUCTION - U5 승인 → Build & Test(ALWAYS) 시작.
+
+---
+
+## Build and Test Stage
+**Timestamp**: 2026-08-22T03:20:00Z
+**Build Status**: Success (bootJar Dallyeo-0.0.1-SNAPSHOT.jar 78MB)
+**Test Status**: Pass (전체 115/115, 31 클래스, 0 실패/에러/스킵)
+**AI Response**: "전 유닛(U1-a~U5) 통합 빌드/테스트 실행. ./gradlew test 115건 전부 통과. DallyeoApplicationTests(@SpringBootTest) 컨텍스트 로드로 부팅 검증(Jackson3+jjwt 공존, run 테이블/idx_run_user_finished/course.description 스키마). 라이브 스모크(실행중 앱 :8080): GET /runs 무토큰 401(deny-by-default 작동), GET /courses description 노출 확인. bootJar 패키징 성공. 지시 문서 6종 생성(build/unit/integration/performance/security/summary). 성능=정식 부하 defer(SLA 미설정). 보안=Security Baseline 준수, at-rest/레이트리밋/스캔 defer."
+**Files Generated**:
+- build-instructions.md
+- unit-test-instructions.md
+- integration-test-instructions.md
+- performance-test-instructions.md
+- security-test-instructions.md
+- build-and-test-summary.md
+**AI Prompt**: "Build & Test 완료(115/115 통과, 부팅·401·description 라이브 검증). Operations 단계로 진행할까요?"
+**Context**: CONSTRUCTION - Build & Test 완료. 전 유닛 완료. GATE: Operations 진행 승인 대기.
+
+---
+
+## POST-U5 - U6 업적(Achievement) 도메인 추가 (사용자 요청)
+**Timestamp**: 2026-08-22T04:00:00Z
+**User Input**: "resources/data/img_1.png 업적들 추가해줘 — 달성 api랑 목록 보는거 등" + (AskUserQuestion) Q1=둘 다(자동+수동), Q2=courseId 기반, Q3=전체+달성여부.
+**AI Response**: "img_1.png에서 업적 8종 추출. 신규 U6 도메인 구현: AchievementType enum(8종, kind=COURSE/REGION_ANY/REGION_ALL + region/courseId), UserAchievement 엔티티(user_achievement, (userId,achievement) 유니크), UserAchievementRepository, AchievementService(evaluateAndUnlock 자동/unlock 수동/list, courseId 기반 판정, 지역코스집합은 course 실데이터), AchievementController(/achievements GET·POST /{code}/unlock). 수정: RunRepository.findDistinctCourseIds 추가, RunService.save에 achievementService.evaluateAndUnlock 훅(응답형태 U5 유지), RunServiceTest 3인자 생성자. 테스트 10건(초기 3실패=단위테스트 PrePersist 미실행으로 unlockedAt null→unlocked 플래그 파생 오류 + Stream.findFirst NPE; unlocked를 기록존재로 판정하도록 서비스 수정 후 통과). 전체 125/125 통과. 라이브 e2e(dev 프로파일 재기동): 무토큰 401, dev로그인, 초기 8개 미달성, POST /runs(gunsan-jjamppong-run)→GUNSAN_BEGINNER+JJAMPPONG 자동달성, 수동 unlock 미충족 409, 없는코드 404 — 전부 확인. 스모크 데이터(achv-smoke) 정리. 문서: u6-achievement/functional-design(business-rules)+code(code-summary), API.md §8 업적 추가(섹션 재번호 9/10), Postman 업적 폴더 2요청. 변경없음: SecurityConfig(deny-by-default 자동)/build.gradle/properties. 후속: 진행률·해제·계정삭제 cascade."
+**Context**: POST-Build&Test 신규 도메인 U6 추가. 전 유닛(U1-a~U6) 완료. GATE: 검토/승인 대기."
+
+---

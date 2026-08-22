@@ -9,6 +9,7 @@ import com.ppip.dallyeo.domain.region.Region;
 public record CourseSummary(
         String id,
         String name,
+        String description,
         Region region,
         CourseDistance distanceCategory,
         int totalMeters,

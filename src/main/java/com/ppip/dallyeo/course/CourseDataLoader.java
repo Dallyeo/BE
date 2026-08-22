@@ -39,6 +39,7 @@ public class CourseDataLoader implements ApplicationRunner {
     record CourseSeed(
             String id,
             String name,
+            String description,
             String region,
             int searchOption,
             String declaredCategory,
@@ -100,6 +101,7 @@ public class CourseDataLoader implements ApplicationRunner {
         return Course.builder()
                 .id(seed.id())
                 .name(seed.name())
+                .description(seed.description())
                 .region(region)
                 .declaredCategory(declared)
                 .measuredCategory(measured)
