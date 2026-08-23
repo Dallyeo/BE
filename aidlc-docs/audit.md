@@ -849,3 +849,11 @@
 **Context**: POST-Build&Test 신규 도메인 U6 추가. 전 유닛(U1-a~U6) 완료. GATE: 검토/승인 대기."
 
 ---
+
+## POST-U6 - CORS 임시 전체 허용(iOS 웹뷰 차단 해제)
+**Timestamp**: 2026-08-23T02:40:00Z
+**User Input**: "전체 해제용으로 우선 처리해 나중에 수정하는게 더 나을듯 이거는 어디에 써놓고 우선 전체 해제해서 테스트 하게 열어줘" (선행 진단: iOS 웹뷰 cross-origin으로 목록 못 읽음 = CORS 미설정 확정)
+**AI Response**: "SecurityConfig에 CORS 추가: http.cors(withDefaults()) + OPTIONS /** permitAll(deny-by-default preflight 차단 해제) + corsConfigurationSource 빈(allowedOriginPatterns '*', allowedMethods GET/POST/PATCH/DELETE/OPTIONS, allowedHeaders '*', allowCredentials=false, maxAge 3600). ⚠️ TEMPORARY 주석 명시. 로컬 재기동 검증: preflight OPTIONS /courses·/runs → 200 + Access-Control-Allow-Origin(capacitor://localhost) + Allow-Headers, 실제 GET /courses(Origin) → 200 + ACAO. 전체 테스트 125/125 통과. 임시조치 기록: aidlc-docs/backlog.md(좁히기 TODO + 절대금지 credentials+wildcard), 프로젝트 메모리(cors-temporary-wildcard). 유의: 프로덕션 반영은 main 병합→EC2 배포 필요. 안전근거: Bearer 토큰(헤더)+쿠키 미사용이라 credentials=false 와일드카드는 CSRF 미유발."
+**Context**: POST-U6 운영 이슈 대응. CORS 임시 전체 허용(테스트용). 배포 후 오리진 좁히기 TODO(backlog)."
+
+---
