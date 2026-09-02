@@ -29,7 +29,10 @@ class RunServiceTest {
     private final CourseRepository courseRepository = mock(CourseRepository.class);
     private final com.ppip.dallyeo.achievement.AchievementService achievementService =
             mock(com.ppip.dallyeo.achievement.AchievementService.class);
-    private final RunService service = new RunService(runRepository, courseRepository, achievementService);
+    private final com.ppip.dallyeo.common.storage.ImageStorage imageStorage =
+            mock(com.ppip.dallyeo.common.storage.ImageStorage.class);
+    private final RunService service =
+            new RunService(runRepository, courseRepository, achievementService, imageStorage);
 
     private final Instant started = Instant.parse("2026-07-09T07:00:00Z");
     private final Instant finished = Instant.parse("2026-07-09T08:00:00Z");
@@ -129,5 +132,75 @@ class RunServiceTest {
         assertThatThrownBy(() -> service.getDetail(7L, 2L))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.NOT_FOUND);
+    }
+
+    // ===== 기록 이미지 업로드 =====
+
+    private final org.springframework.mock.web.MockMultipartFile image =
+            new org.springframework.mock.web.MockMultipartFile("image", "p.jpg", "image/jpeg", "x".getBytes());
+
+    private Run ownedRun() {
+        return Run.builder().id(1L).userId(7L)
+                .distanceMeters(10480).durationSeconds(3600).averagePaceSeconds(343)
+                .startedAt(started).finishedAt(finished).build();
+    }
+
+    @Test
+    void attachImage_storesFileAndPersistsUrl() {
+        Run run = ownedRun();
+        when(runRepository.findById(1L)).thenReturn(Optional.of(run));
+        when(runRepository.save(any(Run.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(imageStorage.store(any(), eq("runs"))).thenReturn("/uploads/runs/abc.jpg");
+
+        RunDetailResponse res = service.attachImage(7L, 1L, image);
+
+        assertThat(res.imageUrl()).isEqualTo("/uploads/runs/abc.jpg");
+        assertThat(run.getImageUrl()).isEqualTo("/uploads/runs/abc.jpg");
+    }
+
+    @Test
+    void attachImage_replacesAndDeletesPreviousFile() {
+        Run run = ownedRun();
+        run.setImageUrl("/uploads/runs/old.jpg");
+        when(runRepository.findById(1L)).thenReturn(Optional.of(run));
+        when(runRepository.save(any(Run.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(imageStorage.store(any(), eq("runs"))).thenReturn("/uploads/runs/new.jpg");
+
+        service.attachImage(7L, 1L, image);
+
+        verify(imageStorage).deleteQuietly("/uploads/runs/old.jpg");
+    }
+
+    @Test
+    void attachImage_othersRun_throwsNotFoundAndStoresNothing() {
+        Run run = Run.builder().id(1L).userId(99L).startedAt(started).finishedAt(finished).build();
+        when(runRepository.findById(1L)).thenReturn(Optional.of(run));
+
+        assertThatThrownBy(() -> service.attachImage(7L, 1L, image))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.NOT_FOUND);
+
+        verify(imageStorage, never()).store(any(), any());
+        verify(runRepository, never()).save(any());
+    }
+
+    @Test
+    void attachImage_missingRun_throwsNotFound() {
+        when(runRepository.findById(2L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.attachImage(7L, 2L, image))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.NOT_FOUND);
+    }
+
+    @Test
+    void listAndDetail_exposeImageUrl() {
+        Run run = ownedRun();
+        run.setImageUrl("/uploads/runs/abc.jpg");
+        when(runRepository.findById(1L)).thenReturn(Optional.of(run));
+        when(runRepository.findByOwnerAndPeriod(eq(7L), any(), any())).thenReturn(List.of(run));
+
+        assertThat(service.getDetail(7L, 1L).imageUrl()).isEqualTo("/uploads/runs/abc.jpg");
+        assertThat(service.list(7L, null, null).get(0).imageUrl()).isEqualTo("/uploads/runs/abc.jpg");
     }
 }

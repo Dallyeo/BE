@@ -3,7 +3,7 @@
 ## Project Information
 - **Project Type**: Brownfield
 - **Start Date**: 2026-07-05T00:00:00Z
-- **Current Stage**: CONSTRUCTION - U6(업적) 추가 완료. 전 유닛(U1-a~U6) 완료. 전체 테스트 125/125 통과, 업적 e2e 라이브 검증(자동 달성/수동 unlock 409·404/목록). bootJar 패키징 성공. (별도: 코스 description 기능 U2 확장 완료.)
+- **Current Stage**: CONSTRUCTION - 전 유닛(U1-a~U6) 완료 + 유지보수 변경 4건 완료(2026-09-02). 전체 테스트 151/151 통과. 라이브 e2e 검증(경유지 정리/러닝 이미지 업로드·서빙/목록 배지).
 
 ## Workspace State
 - **Existing Code**: Yes
@@ -101,6 +101,15 @@
 - [x] U6 COMPLETE — 신규 도메인. 결정 Q1=둘 다(자동+수동)/Q2=courseId 기반/Q3=전체+달성여부. AchievementType enum 8종(img_1.png), UserAchievement 엔티티(user_achievement 테이블), AchievementService(evaluateAndUnlock/unlock/list), AchievementController(/achievements GET, POST /{code}/unlock). RunService.save에 자동 판정 훅, RunRepository.findDistinctCourseIds 추가. 테스트 10건(Service 8 + Controller 2). 라이브 e2e 검증 통과(자동 달성 GUNSAN_BEGINNER+JJAMPPONG, 수동 미충족 409, 없는코드 404, 무토큰 401). 산출물 u6-achievement/functional-design(business-rules), code(code-summary). API.md §8 + Postman 업적 폴더.
 
 - [x] Build and Test - COMPLETE (U6 포함 재실행: 전체 125/125 통과) (승인 대기) — 전체 테스트 115/115 통과(31 클래스, 0 실패). @SpringBootTest 컨텍스트 로드=부팅 검증(Jackson3+jjwt 공존, run 테이블/course.description DDL). 라이브 스모크: /runs 무토큰 401(deny-by-default), /courses description 노출. bootJar 78MB 패키징 성공. 지시 문서 6종(build/unit/integration/performance/security/summary). 성능=N/A(SLA 미설정 defer).
+
+**유지보수 변경 (2026-09-02) — 사용자 요청 4건 + 발견 버그 수정**
+- [x] M1 코스 경유지 정리 — COMPLETE. 자동 생성 이름 제거: 짬뽕런·선유도·아중호수·전주동물원의 `경유지N` 12건 삭제, 한옥마을 `경유지(청연루 입구/출구)` → `청연루 입구/출구` 개명. 미언급 항목(`은파호수 둘레길1~5`, `도착지`)은 보존. courses.json 수정 + `update-course-waypoints.sql` 백필(시드 로더는 "최초 1회만 삽입" 정책 유지 — 운영 DB 수기 수정값 보호). polyline/cumulativeMeters/totalMeters 불변, waypointCount만 갱신. 로컬 DB 적용 후 라이브 확인.
+- [x] M2 러닝 기록 이미지 업로드 — COMPLETE. 결정: 프론트 스토리지 없음 → 백엔드 직접 수신(EC2 로컬 디스크). 신규 `common/storage/`(StorageProperties·ImageStorage), Run.imageUrl 컬럼, `POST /runs/{id}/image`(multipart `image`, 소유권 404 은폐, 재업로드 시 교체+이전 파일 삭제), `/uploads/**` 정적 서빙+permitAll. 보안: UUID 파일명(클라 파일명 미사용 → 경로순회 차단), Content-Type 화이트리스트(jpeg/png/webp/heic/heif), 10MB 상한. 2단계 흐름(POST /runs → POST /runs/{id}/image).
+- [x] M3 코스 이미지 — COMPLETE(플럼빙). Course.imageUrl 컬럼 + CourseSeed/CourseSummary/CourseDetail 노출, `static/images/courses/`(추가 규약 README) + `/images/**` permitAll. **이미지 파일 수급 대기** — 파일 받으면 courses.json imageUrl 기입 + 백필 SQL 필요.
+- [x] M4 /places 목록 배지 — COMPLETE(프론트 요청 수용). PlaceSummary.badges 추가(상세와 동일 형태, 미매칭 `[]`). `BadgeService.badgesForAll(Collection<PlaceKey>)` + `BadgeRepository.findByNormalizedNameIn` — 목록당 **DB 조회 1회**(N+1 없음; 복합인덱스 선행컬럼 normalizedName 활용, 주소 대조는 메모리). search/list/nearby 3종 라이브 확인. 배지 범위 회신: 원천은 군산시 공공데이터 2종(모범음식점 52 + 착한가격업소 60 = 97건 적재)이고 히트율이 낮은 건 데이터 부족이 아니라 **정규화 업소명 AND 주소 완전일치**라는 보수적 매칭 규칙 때문.
+- [x] M5 오류 응답 교정(구현 중 발견) — COMPLETE. 500으로 새던 3경로를 교정: 멀티파트 파트 누락→400, 업로드 용량 초과→400, **미존재 정적 리소스/경로→404**. 마지막 건은 이번 변경 이전부터 있던 결함(모든 오타 경로가 500이었음). GlobalExceptionHandler에 핸들러 3종 추가.
+- [x] 배포 설정 — nginx `client_max_body_size 12m`(기본 1MB면 10MB 업로드 413), `UPLOAD_DIR` **절대경로 필수**(systemd에 WorkingDirectory가 없어 기본 `./uploads`가 `/uploads`로 해석됨). 블루-그린 두 인스턴스가 EnvironmentFile 공유 → 같은 경로 사용.
+- [x] 테스트 — 151/151 통과(기존 125 + 신규 26: ImageStorage 8, PlaceService 6, BadgeService 4, RunService 5, GlobalExceptionHandler 3). 라이브 e2e: 업로드→상세/목록 반영→무인증 서빙 200, 오류경로 401/404/400 정상.
 
 ### 🟡 OPERATIONS PHASE
 - [ ] Operations - PLACEHOLDER

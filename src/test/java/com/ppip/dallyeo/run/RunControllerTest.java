@@ -26,7 +26,7 @@ class RunControllerTest {
     private RunDetailResponse detail() {
         return new RunDetailResponse(1L, null, null,
                 List.of(new PolylinePoint(35.95, 126.68)),
-                10480, 3600, 343, null, started, finished);
+                10480, 3600, 343, null, null, started, finished);
     }
 
     @Test
@@ -43,7 +43,7 @@ class RunControllerTest {
 
     @Test
     void list_delegatesWithPeriod() {
-        RunSummaryResponse summary = new RunSummaryResponse(1L, "근대 역사 박물관 런", 10480, 3600, finished);
+        RunSummaryResponse summary = new RunSummaryResponse(1L, "근대 역사 박물관 런", 10480, 3600, null, finished);
         when(runService.list(7L, "2026-07-01", "2026-07-31")).thenReturn(List.of(summary));
 
         ApiResponse<List<RunSummaryResponse>> res = controller.list(7L, "2026-07-01", "2026-07-31");

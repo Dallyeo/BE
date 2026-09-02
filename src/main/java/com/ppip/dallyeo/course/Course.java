@@ -47,6 +47,12 @@ public class Course {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    /**
+     * 코스 대표 이미지 URL. 정적 리소스 규약: {@code /images/courses/{id}.png}
+     * (파일은 classpath {@code static/images/courses/}). 이미지 미제공 코스는 null.
+     */
+    private String imageUrl;
+
     @Enumerated(EnumType.STRING)
     private Region region;
 

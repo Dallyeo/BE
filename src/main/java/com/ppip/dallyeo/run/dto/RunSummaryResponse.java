@@ -11,6 +11,7 @@ public record RunSummaryResponse(
         String courseName,
         int distanceMeters,
         int durationSeconds,
+        String imageUrl,
         Instant finishedAt
 ) {
 }

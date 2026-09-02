@@ -17,6 +17,7 @@ public record RunDetailResponse(
         int distanceMeters,
         int durationSeconds,
         int averagePaceSeconds,
+        String imageUrl,
         Double completionRate,
         Instant startedAt,
         Instant finishedAt

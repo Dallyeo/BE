@@ -49,6 +49,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/auth/login/*", "/auth/refresh").permitAll()
                         // 🌐 공개: 비개인 참조/조회 데이터
                         .requestMatchers(HttpMethod.GET, "/regions", "/courses", "/courses/*", "/places/**").permitAll()
+                        // 🌐 공개: 이미지 정적 리소스. 코스 이미지(classpath static)와 업로드 기록 이미지.
+                        // 업로드 경로는 파일명이 UUID라 추측 불가 — 열람은 URL을 아는 소유자/공유 대상으로 한정된다.
+                        .requestMatchers(HttpMethod.GET, "/images/**", "/uploads/**").permitAll()
                         // 인프라: 헬스체크(배포 스위치 판단)
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         // 개발/테스트 전용 로그인 — 컨트롤러가 @Profile("dev")라 prod에는 핸들러가 없음(404)

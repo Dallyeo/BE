@@ -7,14 +7,17 @@ import com.ppip.dallyeo.run.dto.RunDetailResponse;
 import com.ppip.dallyeo.run.dto.RunSummaryResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -38,6 +41,17 @@ public class RunController {
     public ApiResponse<RunDetailResponse> save(@AuthUser Long userId,
                                                @Valid @RequestBody RunCreateRequest request) {
         return ApiResponse.success(runService.save(userId, request));
+    }
+
+    /**
+     * 기록 이미지 업로드/교체. multipart/form-data, 파트명 {@code image}.
+     * 저장 후 갱신된 상세(imageUrl 포함)를 돌려준다. 타인/미존재 → 404.
+     */
+    @PostMapping(value = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<RunDetailResponse> uploadImage(@AuthUser Long userId,
+                                                      @PathVariable Long id,
+                                                      @RequestPart("image") MultipartFile image) {
+        return ApiResponse.success(runService.attachImage(userId, id, image));
     }
 
     /** 러닝 기록 목록 (US-RUN-2). 본인만, 기간(from/to ISO date) 선택. */

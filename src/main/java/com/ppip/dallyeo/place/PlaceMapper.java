@@ -24,12 +24,13 @@ public class PlaceMapper {
         this.categoryMapper = categoryMapper;
     }
 
+    /** 배지는 여기서 채우지 않는다(빈 배열) — 목록은 PlaceService가 일괄 조회로 부착한다. */
     public PlaceSummary toSummary(TourItem item) {
         CategoryType category = categoryMapper.map(item.contentTypeId(), item.lclsSystm2()).type();
         return new PlaceSummary(
                 item.contentId(), item.title(), category,
                 item.latitude(), item.longitude(), item.address(),
-                item.thumbnailUrl(), item.distanceMeters());
+                item.thumbnailUrl(), item.distanceMeters(), List.of());
     }
 
     public List<PlaceSummary> toSummaries(List<TourItem> items) {

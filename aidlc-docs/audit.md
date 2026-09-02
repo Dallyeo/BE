@@ -857,3 +857,72 @@
 **Context**: POST-U6 운영 이슈 대응. CORS 임시 전체 허용(테스트용). 배포 후 오리진 좁히기 TODO(backlog)."
 
 ---
+
+## 유지보수 변경 요청 (경유지 정리 · 이미지 · 목록 배지)
+**Timestamp**: 2026-09-02T11:30:00Z
+**User Input**: "아니 추가하거나 수정해야 할 부분들이 있어서 그래 우선 CORS는 냅두고 다른거부터 하자 
+1. 코스중에서 경유지가 이상하게 나오는 경우가 있어 데이터베이스를 보면 코스에서 waypoint_anchors에 경유지1, 경유지2 이런식으로 되어있는게 있어 이거 없애야해. 그냥 내가 입력한 다른 곳들만 남아있어야해.
+2. 러닝을 하고난 이후 기록 저장할 때 기록 이미지를 저장할 수 있게 해야돼
+3. 코스정보에도 이미지를 추가해야돼(코스 이미지는 우선 나중에 줄꼐)
+4. 요청이 왔는데 아래 붙여넣은 내용을 들어줘야해
+/places 계열 리스트 응답에 badges 추가 요청드립니다.
+
+■ 현재 상태
+GET /places/{id}        → badges 있음  (예: [\"MODEL_RESTAURANT\"])
+GET /places/search      → badges 없음
+GET /places             → badges 없음
+GET /places/nearby      → badges 없음
+
+■ 요청
+위 세 개(PlaceSummary)에도 상세와 동일한 형태로 badges를 넣어주실 수 있을까요?
+
+  \"badges\": [\"MODEL_RESTAURANT\"]   // 없으면 []
+
+■ 이유
+디자인상 검색 결과 목록(V05) 카드에도 배지 칩이 들어갑니다.
+지금 구조로는 목록에 배지를 표시하려면 항목마다 /places/{id}를
+한 번씩 더 호출해야 하는데, 검색 결과가 30건이면 API 호출이 30배가 됩니다.
+/places/* 는 TourAPI 실시간 호출이라 502도 간헐적으로 나는 구간이라
+목록 로딩이 많이 느려지고 실패 확률도 올라갈 것 같습니다.
+
+이미 매칭 데이터를 갖고 계실 테니 응답에 얹는 것만으로 해결될 것 같은데,
+혹시 목록 쿼리에서 조인 비용이 크다면 알려주세요. 다른 방법 찾아보겠습니다.
+
+■ 참고
+현재 배지 데이터가 군산 음식점·카페 30곳 중 1곳(등대로 / MODEL_RESTAURANT)
+에만 있습니다. 원래 이 정도 범위가 맞는지도 확인 한번 부탁드려요."
+**AI Response**: 코드베이스 조사 후 결정 필요 항목(경유지 제거 범위, 러닝 이미지 저장 방식, 코스 이미지 전달 형태, DB 반영 방식)을 질문으로 제시.
+**Context**: 유지보수 변경 4건 접수. CORS 좁히기는 사용자 지시로 보류(백로그 유지).
+
+---
+
+## 결정 사항 수집 (경유지 범위)
+**Timestamp**: 2026-09-02T11:35:00Z
+**User Input**: "짬뽕런, 선유도 해변 런, 아중호수 둘레길 코스, 전주동물원 코스에 있는 경유지로 되는 것들은 모두 지우고, 한옥마을 둘레길의 경우 경유지(청연루 입구) 이런거는 경유지()를 삭제하고 청연루 입구, 청연루 출구 이런식으로 남겨놔줘"
+**AI Response**: 확정 — 4개 코스의 `경유지N` 12건 제거, 한옥마을 2건은 `청연루 입구`/`청연루 출구`로 개명 유지. 언급 없는 `은파호수 둘레길1~5`, `도착지`는 보존. DB 반영은 기존 update-course-description.sql 선례대로 백필 SQL 생성.
+**Context**: 요구사항 1번 범위 확정.
+
+---
+
+## 결정 사항 수집 (이미지 저장 방식)
+**Timestamp**: 2026-09-02T11:40:00Z
+**User Input**: [AskUserQuestion 응답] "러닝 기록 이미지 — 프론트가 이미지를 올릴 수 있는 저장소가 이미 있나요?" = "없음 → 백엔드가 파일 직접 수신" / "코스 이미지 — 나중에 어떤 형태로 주실 예정인가요?" = "이미지 파일로 줌"
+**AI Response**: 러닝 이미지 = 멀티파트 업로드 → EC2 로컬 디스크 저장 + 정적 서빙. 코스 이미지 = classpath static/images/courses/ 파일 서빙 + imageUrl 컬럼(값은 파일 수급 후 채움).
+**Context**: 요구사항 2·3번 방식 확정.
+
+---
+
+## 구현 완료 (유지보수 변경 4건)
+**Timestamp**: 2026-09-02T12:20:00Z
+**User Input**: (해당 없음 — 승인된 결정에 따른 구현 실행)
+**AI Response**: 4건 전부 구현·검증 완료. 전체 테스트 151/151 통과(기존 125 + 신규 26). 라이브 e2e 검증 통과.
+**Context**: 산출물 요약
+- **1. 경유지 정리**: courses.json 수정(경유지N 12건 제거, 청연루 2건 개명) + `update-course-waypoints.sql` 백필 생성. 로컬 DB 적용 후 라이브 확인 — polyline 좌표 수 불변, waypointCount만 갱신.
+- **2. 러닝 이미지**: `common/storage/`(StorageProperties·ImageStorage) 신규, Run.imageUrl 컬럼, `POST /runs/{id}/image`(multipart, 소유권 404 은폐, 교체 시 이전 파일 삭제), `/uploads/**` 정적 서빙 + permitAll. UUID 파일명(경로순회 차단), Content-Type 화이트리스트, 10MB 상한.
+- **3. 코스 이미지**: Course.imageUrl 컬럼 + CourseSeed/CourseSummary/CourseDetail 노출, `static/images/courses/`(README 규약 포함) + `/images/**` permitAll. **이미지 파일 수급 대기**.
+- **4. 목록 배지**: PlaceSummary.badges 추가, `BadgeService.badgesForAll(Collection<PlaceKey>)` + `findByNormalizedNameIn` — 목록당 DB 조회 **1회**(N+1 없음, 복합인덱스 선행컬럼 활용). search/list/nearby 3종 라이브 확인.
+- **부수 수정(발견된 버그)**: 멀티파트 파트 누락·업로드 용량 초과·미존재 정적 리소스가 **500으로 새던 것**을 각각 400/400/404로 교정(GlobalExceptionHandler 3개 핸들러 추가). 미존재 경로 500은 이번 변경 이전부터 있던 결함.
+- **배포 설정**: nginx `client_max_body_size 12m`(기본 1MB면 413), `UPLOAD_DIR` 절대경로 필수 안내(systemd WorkingDirectory 없어 ./uploads가 /uploads로 해석됨).
+- **문서**: API.md(3.1/3.2/4.x/7.2 신설·번호 재정렬/9/10), Postman(러닝 이미지 업로드 요청), backlog.md.
+
+---

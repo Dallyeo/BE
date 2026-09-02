@@ -12,6 +12,9 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
 
@@ -52,6 +55,32 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
         List<ErrorDetail> details = List.of(new ErrorDetail(ex.getName(), "값의 형식이 올바르지 않습니다."));
         return build(ErrorCode.VALIDATION_ERROR, ErrorCode.VALIDATION_ERROR.defaultMessage(), details);
+    }
+
+    /** 멀티파트 파트 누락(예: 파트명을 image가 아닌 값으로 보냄) → 400, VALIDATION_ERROR. */
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingPart(MissingServletRequestPartException ex) {
+        List<ErrorDetail> details = List.of(
+                new ErrorDetail(ex.getRequestPartName(), "필수 파일 파트가 누락되었습니다."));
+        return build(ErrorCode.VALIDATION_ERROR, ErrorCode.VALIDATION_ERROR.defaultMessage(), details);
+    }
+
+    /**
+     * 업로드 용량 초과 → 400, BAD_REQUEST. 서블릿 단(spring.servlet.multipart.max-file-size)에서
+     * 컨트롤러 도달 전에 끊기는 경로라 별도 처리가 필요하다.
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMaxUploadSize(MaxUploadSizeExceededException ex) {
+        return build(ErrorCode.BAD_REQUEST, "업로드 파일이 허용 크기를 초과했습니다.", null);
+    }
+
+    /**
+     * 매핑된 핸들러도 정적 리소스도 없는 경로 → 404, NOT_FOUND.
+     * (없는 이미지 URL이나 오타 경로가 500으로 나가지 않도록.)
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNoResource(NoResourceFoundException ex) {
+        return build(ErrorCode.NOT_FOUND, "요청한 경로를 찾을 수 없습니다.", null);
     }
 
     /** 권한 없음 → 403, FORBIDDEN. */

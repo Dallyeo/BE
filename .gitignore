@@ -82,3 +82,5 @@ dallyeo-postman-collection.json
 
 ### Claude Code (AI-DLC) ###
 .claude/settings.local.json
+### 업로드 파일 (런타임 생성 — 로컬 개발 기본 경로) ###
+/uploads/
