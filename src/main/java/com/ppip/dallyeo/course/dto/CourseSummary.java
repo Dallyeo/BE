@@ -10,6 +10,7 @@ public record CourseSummary(
         String id,
         String name,
         String description,
+        String imageUrl,
         Region region,
         CourseDistance distanceCategory,
         int totalMeters,

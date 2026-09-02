@@ -1,7 +1,8 @@
 # Dallyeo API 명세 (프론트엔드용)
 
 > 현재까지 구현된 API입니다. 🌐 = 공개(토큰 불필요), 🔒 = 인증 필요.
-> **U1-a/U2/U3(공개 조회) + U4(인증·사용자) + U5(러닝 기록) + U6(업적)** 완료. 사용자 코스 생성은 백엔드에 저장하지 않음(프론트/클라이언트 담당) — 사용자가 만든 경로는 러닝 기록의 `polyline`으로 저장됩니다.
+> **U1-a/U2/U3(공개 조회) + U4(인증·사용자) + U5(러닝 기록) + U6(업적)** 완료.
+> **최근 변경**: 코스 경유지에서 자동 생성 이름(`경유지1` 등) 제거 · 러닝 기록 이미지 업로드(`POST /runs/{id}/image`) 추가 · 코스 `imageUrl` 추가 · `/places` **목록 3종에 `badges` 추가**. 사용자 코스 생성은 백엔드에 저장하지 않음(프론트/클라이언트 담당) — 사용자가 만든 경로는 러닝 기록의 `polyline`으로 저장됩니다.
 
 - **Base URL**: `https://dallyeo.cloud` (개발 로컬: `http://localhost:8080`)
 - **Content-Type**: `application/json; charset=UTF-8`
@@ -91,6 +92,7 @@ GET /courses?region={GUNSAN|JEONJU}&distance={SHORT|MEDIUM|LONG}
       "id": "jeonju-hanok-village-run",
       "name": "한옥마을 둘레길 코스",
       "description": "전주 한옥마을 일대를 가볍게 한 바퀴 도는 코스입니다. 곳곳에 자리한 크고 작은 문화유산을 둘러보며 전주의 정취를 느껴보세요.",
+      "imageUrl": "/images/courses/jeonju-hanok-village-run.png",
       "region": "JEONJU",
       "distanceCategory": "SHORT",
       "totalMeters": 2799,
@@ -114,6 +116,7 @@ GET /courses/{id}
     "id": "jeonju-hanok-village-run",
     "name": "한옥마을 둘레길 코스",
     "description": "전주 한옥마을 일대를 가볍게 한 바퀴 도는 코스입니다. 곳곳에 자리한 크고 작은 문화유산을 둘러보며 전주의 정취를 느껴보세요.",
+    "imageUrl": "/images/courses/jeonju-hanok-village-run.png",
     "region": "JEONJU",
     "distanceCategory": "SHORT",
     "totalMeters": 2799,
@@ -130,6 +133,10 @@ GET /courses/{id}
 ```
 - `polyline[i]` ↔ `cumulativeMeters[i]` 인덱스 대응(시작점부터 누적 거리, m).
 - `waypointAnchors[].polylineIndex` = 해당 경유지가 위치한 `polyline` 인덱스.
+- `waypointAnchors`는 **실제 지명만** 담습니다. 자동 생성 이름(`경유지1`, `경유지2` …)은 제거되었습니다.
+  경로(`polyline`)는 그대로이고 표시할 지점 수만 줄어든 것이라, 지도에 그리는 선은 이전과 동일합니다.
+- `imageUrl`: 코스 대표 이미지. **서버 기준 절대 경로**이므로 API 베이스 URL을 앞에 붙여 사용하세요
+  (예: `https://dallyeo.cloud/images/courses/xxx.png`). 이미지가 아직 없는 코스는 필드가 **생략**됩니다.
 
 ---
 
@@ -147,9 +154,12 @@ GET /courses/{id}
   "longitude": 126.6801,
   "address": "전북특별자치도 군산시 군산창2길 48",
   "thumbnailUrl": "https://.../image.jpg",  // null 가능
-  "distanceMeters": 221.9   // /places/nearby 에서만 값, 그 외 null
+  "distanceMeters": 221.9,  // /places/nearby 에서만 값, 그 외 null
+  "badges": ["MODEL_RESTAURANT"]  // 배지 없으면 [] (상세와 동일 형태)
 }
 ```
+- `badges`는 목록(4.1/4.2/4.3)과 상세(4.4)가 **동일한 형태**입니다.
+  목록 카드에 배지 칩을 그리려고 항목마다 `/places/{id}`를 추가 호출할 필요가 없습니다.
 
 ### 4.1 키워드 검색
 ```
@@ -180,7 +190,7 @@ GET /places/nearby?lat={위도}&lng={경도}&radius={미터}&category={카테고
     { "id": "914536", "name": "군산 해망굴", "category": "TOUR",
       "latitude": 35.9755, "longitude": 126.6801,
       "address": "전북특별자치도 군산시 군산창2길 48",
-      "thumbnailUrl": null, "distanceMeters": null }
+      "thumbnailUrl": null, "distanceMeters": null, "badges": [] }
   ]
 }
 ```
@@ -208,7 +218,11 @@ GET /places/{id}
   }
 }
 ```
-- `badges`: 군산 모범음식점/착한가격업소로 매칭된 경우에만 값. 대부분의 일반 장소는 `[]`.
+- `badges`: 군산 모범음식점(`MODEL_RESTAURANT`)/착한가격업소(`GOOD_PRICE`)로 매칭된 경우에만 값.
+  대부분의 일반 장소는 `[]`입니다.
+- **매칭 범위**: 배지 원천은 군산시 공공데이터 2종(모범음식점 52건 + 착한가격업소 60건, 총 97건 적재)입니다.
+  매칭은 정규화한 **업소명과 주소가 둘 다 정확히 일치**할 때만 성립하므로(오매칭 방지), TourAPI 표기가
+  조금이라도 다르면 배지가 붙지 않습니다. 히트율이 낮은 건 데이터 부족이 아니라 이 보수적 규칙 때문입니다.
 
 ---
 
@@ -379,14 +393,58 @@ POST /runs
     "distanceMeters": 10480,
     "durationSeconds": 3600,
     "averagePaceSeconds": 343,
+    "imageUrl": null,
     "startedAt": "2026-07-09T07:00:00Z",
     "finishedAt": "2026-07-09T08:00:00Z"
   }
 }
 ```
 > `completionRate`(완주율)는 아직 계산하지 않습니다(응답에서 생략). 계산 기준 확정 후 추가 예정.
+> `imageUrl`은 저장 직후엔 항상 비어 있습니다 — 이미지는 **7.2에서 별도로 업로드**합니다.
 
-### 7.2 러닝 기록 목록 조회
+### 7.2 러닝 기록 이미지 업로드
+```
+POST /runs/{id}/image
+Content-Type: multipart/form-data
+```
+러닝을 저장(7.1)해서 받은 `id`로 기록 이미지를 올립니다. **2단계 흐름**입니다:
+`POST /runs` 로 기록 저장 → 응답의 `id` → `POST /runs/{id}/image` 로 이미지 첨부.
+
+**Request (multipart/form-data)**
+
+| 파트명 | 타입 | 설명 |
+|---|---|---|
+| `image` | file | 이미지 파일 (**필수**) |
+
+- 허용 형식: `image/jpeg`, `image/png`, `image/webp`, `image/heic`, `image/heif`. 그 외 → **400**
+- 최대 크기: **10MB**. 초과 → **400**
+- 본인 기록만. 타인의 기록이거나 존재하지 않으면 **404**
+- 이미 이미지가 있으면 **새 파일로 교체**되고 이전 파일은 서버에서 삭제됩니다(재호출로 재업로드 가능).
+
+**Response 200** — 7.1과 동일 구조이며 `imageUrl`이 채워져 돌아옵니다.
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "courseId": "gunsan-modern-history-run | null",
+    "courseName": "근대 역사 박물관 런 | null",
+    "polyline": [ { "lat": 35.95, "lng": 126.68 } ],
+    "distanceMeters": 10480,
+    "durationSeconds": 3600,
+    "averagePaceSeconds": 343,
+    "imageUrl": "/uploads/runs/3f2a....jpg",
+    "startedAt": "2026-07-09T07:00:00Z",
+    "finishedAt": "2026-07-09T08:00:00Z"
+  }
+}
+```
+- `imageUrl`은 **서버 기준 절대 경로**입니다. 표시할 때 API 베이스 URL을 앞에 붙이세요
+  (예: `https://dallyeo.cloud/uploads/runs/3f2a....jpg`).
+- 이미지 조회는 **인증 없이** 가능합니다(파일명이 UUID라 URL을 모르면 접근 불가).
+- 파일명은 서버가 UUID로 새로 짓습니다 — 클라이언트가 보낸 파일명은 사용되지 않습니다.
+
+### 7.3 러닝 기록 목록 조회
 ```
 GET /runs?from={ISO date}&to={ISO date}
 ```
@@ -403,18 +461,19 @@ GET /runs?from={ISO date}&to={ISO date}
       "courseName": "근대 역사 박물관 런 | null",
       "distanceMeters": 10480,
       "durationSeconds": 3600,
+      "imageUrl": "/uploads/runs/3f2a....jpg",
       "finishedAt": "2026-07-09T08:00:00Z"
     }
   ]
 }
 ```
 
-### 7.3 러닝 기록 상세 조회
+### 7.4 러닝 기록 상세 조회
 ```
 GET /runs/{id}
 ```
 - 본인 기록만. 타인의 기록이거나 존재하지 않으면 **404**.
-- **Response 200** — 7.1 응답과 동일 구조(`polyline` 포함).
+- **Response 200** — 7.1 응답과 동일 구조(`polyline`·`imageUrl` 포함).
 
 ---
 
@@ -481,12 +540,15 @@ POST /achievements/{code}/unlock
 
 1. **응답은 항상 `{success, data|error}` 래퍼** — `data`/`error`를 먼저 분기.
 2. **null 필드 존재** — 장소의 `latitude/longitude/thumbnailUrl/businessHours/imageUrl/distanceMeters`는 상황에 따라 `null`. UI에서 방어 처리 필요.
+   - 러닝 `imageUrl`(업로드 전)과 코스 `imageUrl`(이미지 미등록)도 마찬가지로 비어 있을 수 있습니다.
+   - 반면 `badges`는 **항상 배열**입니다 — 매칭이 없으면 `null`이 아니라 `[]`.
 3. **502 재시도** — `/places/*`(검색/목록/반경/상세)는 외부 API라 간헐 502 가능 → 1~2회 재시도 로직 권장. `/regions`, `/courses*`는 DB라 502 없음.
 4. **좌표축 주의** — `latitude`=위도, `longitude`=경도. 반경 조회 파라미터도 `lat`(위도)/`lng`(경도).
 5. **에러 코드로 분기** — `error.code`는 고정 문자열이라 UI 분기에 사용(메시지는 변경될 수 있음).
 6. **🔒 요청엔 토큰 첨부** — `Authorization: Bearer {accessToken}` 헤더. 없거나 만료면 `401`.
 7. **401 → 자동 갱신 흐름** — 🔒 요청이 `401`이면 `POST /auth/refresh`로 재발급 후 원요청 재시도. refresh도 401이면 재로그인.
 8. **토큰 회전 저장** — `/auth/refresh` 응답의 **새 refreshToken으로 반드시 교체** 저장(이전 값은 무효).
+9. **이미지 경로는 상대경로** — 러닝 `imageUrl`(`/uploads/...`)과 코스 `imageUrl`(`/images/...`)은 서버 기준 절대 경로입니다. 표시할 때 Base URL을 붙이세요. 이미지 조회 자체는 토큰이 필요 없습니다.
 
 ---
 
@@ -497,9 +559,13 @@ POST /achievements/{code}/unlock
 | 소셜 로그인 / 토큰 발급·갱신 (🔒) | ✅ **U4 완료** |
 | 사용자 프로필·온보딩·탈퇴 (🔒) | ✅ **U4 완료** |
 | 러닝 기록 저장·목록·상세 `POST/GET /runs` (🔒) | ✅ **U5 완료** |
+| 러닝 기록 이미지 업로드 `POST /runs/{id}/image` (🔒) | ✅ **완료** |
+| 코스 대표 이미지 `imageUrl` | ⏳ 필드/서빙 완료 — **이미지 파일 수급 대기** |
+| `/places` 목록 3종 `badges` | ✅ **완료**(상세와 동일 형태) |
 | 업적 목록·달성 `GET /achievements`, `POST /achievements/{code}/unlock` (🔒) | ✅ **U6 완료** |
 | 사용자 코스 생성 `POST /courses` (🔒) | 백엔드 저장 안 함(프론트 담당) — 러닝 `polyline`으로 보관 |
 | 러닝 기록 수정·삭제 / 완주율·통계 / 업적 진행률 | 후속(백로그) |
 | 장소 상세 부가정보/이미지 갤러리 | 후속 |
+| 러닝 이미지 삭제 API / 배지 매칭 완화(이름만·유사도) | 후속(백로그) |
 
 > 🔒 엔드포인트는 `Authorization: Bearer {token}` 헤더가 필요합니다. 공개 API는 그대로 유지됩니다.

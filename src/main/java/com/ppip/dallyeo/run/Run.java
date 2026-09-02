@@ -60,6 +60,9 @@ public class Run {
     /** 평균 페이스(초/km). 클라이언트 계산값 그대로 저장(BR-U5-7). */
     private int averagePaceSeconds;
 
+    /** 기록 이미지 공개 URL 경로(예: /uploads/runs/{uuid}.jpg). 업로드 전이면 null. */
+    private String imageUrl;
+
     @Column(nullable = false)
     private Instant startedAt;
 

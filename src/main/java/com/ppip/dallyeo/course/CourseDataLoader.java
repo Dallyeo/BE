@@ -40,6 +40,7 @@ public class CourseDataLoader implements ApplicationRunner {
             String id,
             String name,
             String description,
+            String imageUrl,
             String region,
             int searchOption,
             String declaredCategory,
@@ -102,6 +103,7 @@ public class CourseDataLoader implements ApplicationRunner {
                 .id(seed.id())
                 .name(seed.name())
                 .description(seed.description())
+                .imageUrl(seed.imageUrl())
                 .region(region)
                 .declaredCategory(declared)
                 .measuredCategory(measured)

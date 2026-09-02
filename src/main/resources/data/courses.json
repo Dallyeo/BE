@@ -6246,14 +6246,6 @@
         "polylineIndex": 0
       },
       {
-        "name": "경유지1",
-        "polylineIndex": 21
-      },
-      {
-        "name": "경유지2",
-        "polylineIndex": 53
-      },
-      {
         "name": "경암동철길마을",
         "polylineIndex": 98
       },
@@ -7389,14 +7381,6 @@
       {
         "name": "옥돌해변",
         "polylineIndex": 0
-      },
-      {
-        "name": "경유지1",
-        "polylineIndex": 19
-      },
-      {
-        "name": "경유지2",
-        "polylineIndex": 75
       },
       {
         "name": "선유도 방파제",
@@ -11264,11 +11248,11 @@
         "polylineIndex": 49
       },
       {
-        "name": "경유지(청연루 입구)",
+        "name": "청연루 입구",
         "polylineIndex": 86
       },
       {
-        "name": "경유지(청연루 출구)",
+        "name": "청연루 출구",
         "polylineIndex": 93
       },
       {
@@ -12661,22 +12645,6 @@
         "polylineIndex": 0
       },
       {
-        "name": "경유지1",
-        "polylineIndex": 132
-      },
-      {
-        "name": "경유지2",
-        "polylineIndex": 172
-      },
-      {
-        "name": "경유지3",
-        "polylineIndex": 218
-      },
-      {
-        "name": "경유지4",
-        "polylineIndex": 258
-      },
-      {
         "name": "도착지",
         "polylineIndex": 272
       }
@@ -13709,22 +13677,6 @@
       {
         "name": "덕진공원 3층 석탑",
         "polylineIndex": 0
-      },
-      {
-        "name": "경유지1",
-        "polylineIndex": 27
-      },
-      {
-        "name": "경유지2",
-        "polylineIndex": 45
-      },
-      {
-        "name": "경유지3",
-        "polylineIndex": 47
-      },
-      {
-        "name": "경유지4",
-        "polylineIndex": 102
       },
       {
         "name": "전주동물원",

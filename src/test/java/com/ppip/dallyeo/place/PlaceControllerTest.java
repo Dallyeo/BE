@@ -39,7 +39,7 @@ class PlaceControllerTest {
     @Test
     void search_validDelegates() {
         when(service.search(eq("커피"), eq(Region.GUNSAN), any()))
-                .thenReturn(List.of(new PlaceSummary("1", "카페", null, 35.9, 126.7, "주소", null, null)));
+                .thenReturn(List.of(new PlaceSummary("1", "카페", null, 35.9, 126.7, "주소", null, null, java.util.List.of())));
 
         ApiResponse<List<PlaceSummary>> res = controller.search("커피", "GUNSAN", "CAFE");
 

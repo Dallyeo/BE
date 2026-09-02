@@ -3,12 +3,14 @@ package com.ppip.dallyeo.run;
 import com.ppip.dallyeo.achievement.AchievementService;
 import com.ppip.dallyeo.common.exception.BusinessException;
 import com.ppip.dallyeo.common.exception.ErrorCode;
+import com.ppip.dallyeo.common.storage.ImageStorage;
 import com.ppip.dallyeo.course.CourseRepository;
 import com.ppip.dallyeo.run.dto.RunCreateRequest;
 import com.ppip.dallyeo.run.dto.RunDetailResponse;
 import com.ppip.dallyeo.run.dto.RunSummaryResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -28,15 +30,20 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class RunService {
 
+    /** 기록 이미지 저장 하위 디렉터리 — {dir}/runs/. */
+    private static final String IMAGE_CATEGORY = "runs";
+
     private final RunRepository runRepository;
     private final CourseRepository courseRepository;
     private final AchievementService achievementService;
+    private final ImageStorage imageStorage;
 
     public RunService(RunRepository runRepository, CourseRepository courseRepository,
-                      AchievementService achievementService) {
+                      AchievementService achievementService, ImageStorage imageStorage) {
         this.runRepository = runRepository;
         this.courseRepository = courseRepository;
         this.achievementService = achievementService;
+        this.imageStorage = imageStorage;
     }
 
     /** 러닝 기록 저장 (US-RUN-1). 검증 위반 → 400. */
@@ -70,10 +77,30 @@ public class RunService {
 
     /** 러닝 기록 상세 (US-RUN-3). 미존재/타인 → 404. */
     public RunDetailResponse getDetail(Long userId, Long id) {
-        Run run = runRepository.findById(id)
+        return toDetail(findOwned(userId, id));
+    }
+
+    /**
+     * 기록 이미지 업로드/교체. 미존재/타인 → 404(소유권 은폐, BR-U5-2).
+     * 이미 이미지가 있으면 새 파일로 교체하고 이전 파일은 지운다.
+     */
+    @Transactional
+    public RunDetailResponse attachImage(Long userId, Long id, MultipartFile file) {
+        Run run = findOwned(userId, id);
+        String previous = run.getImageUrl();
+        run.setImageUrl(imageStorage.store(file, IMAGE_CATEGORY));
+        Run saved = runRepository.save(run);
+        if (previous != null && !previous.equals(saved.getImageUrl())) {
+            imageStorage.deleteQuietly(previous);
+        }
+        return toDetail(saved);
+    }
+
+    /** 본인 소유 기록 조회. 미존재/타인 모두 404로 동일 처리(존재 여부 노출 방지). */
+    private Run findOwned(Long userId, Long id) {
+        return runRepository.findById(id)
                 .filter(r -> r.getUserId().equals(userId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "러닝 기록을 찾을 수 없습니다: " + id));
-        return toDetail(run);
     }
 
     private void validate(RunCreateRequest request) {
@@ -91,6 +118,7 @@ public class RunService {
                 run.getDistanceMeters(),
                 run.getDurationSeconds(),
                 run.getAveragePaceSeconds(),
+                run.getImageUrl(),
                 null,
                 run.getStartedAt(),
                 run.getFinishedAt());
@@ -102,6 +130,7 @@ public class RunService {
                 lookupCourseName(run.getCourseId()),
                 run.getDistanceMeters(),
                 run.getDurationSeconds(),
+                run.getImageUrl(),
                 run.getFinishedAt());
     }
 
