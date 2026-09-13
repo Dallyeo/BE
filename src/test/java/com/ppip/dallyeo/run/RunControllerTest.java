@@ -5,6 +5,7 @@ import com.ppip.dallyeo.course.dto.PolylinePoint;
 import com.ppip.dallyeo.run.dto.RunCreateRequest;
 import com.ppip.dallyeo.run.dto.RunDetailResponse;
 import com.ppip.dallyeo.run.dto.RunSummaryResponse;
+import org.springframework.mock.web.MockMultipartFile;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -25,17 +26,19 @@ class RunControllerTest {
 
     private RunDetailResponse detail() {
         return new RunDetailResponse(1L, null, null,
-                List.of(new PolylinePoint(35.95, 126.68)),
-                10480, 3600, 343, null, null, started, finished, null);
+                new PolylinePoint(35.95, 126.68), new PolylinePoint(35.96, 126.69),
+                10480, 3600, 343, "/uploads/runs/x.jpg", null, started, finished, null);
     }
 
     @Test
     void save_delegatesAndWraps() {
         RunCreateRequest req = new RunCreateRequest(null,
-                List.of(new PolylinePoint(35.95, 126.68)), 10480, 3600, 343, started, finished);
-        when(runService.save(7L, req)).thenReturn(detail());
+                new PolylinePoint(35.95, 126.68), new PolylinePoint(35.96, 126.69),
+                10480, 3600, started, finished);
+        MockMultipartFile image = new MockMultipartFile("image", "r.jpg", "image/jpeg", "x".getBytes());
+        when(runService.save(7L, req, image)).thenReturn(detail());
 
-        ApiResponse<RunDetailResponse> res = controller.save(7L, req);
+        ApiResponse<RunDetailResponse> res = controller.save(7L, req, image);
 
         assertThat(res.success()).isTrue();
         assertThat(res.data().id()).isEqualTo(1L);

@@ -36,7 +36,7 @@ class TourApiClientTest {
         TourApiProperties props = new TourApiProperties(
                 wm.baseUrl(), "TESTKEY",
                 Duration.ofSeconds(2), Duration.ofSeconds(3), Duration.ofMinutes(30),
-                Duration.ofHours(24), 4, Duration.ofSeconds(4));
+                Duration.ofHours(24), Duration.ofDays(30), 4, Duration.ofSeconds(4));
         client = new TourApiClient(restClient, props, new TourApiNormalizer());
     }
 
