@@ -26,7 +26,7 @@ class RunControllerTest {
     private RunDetailResponse detail() {
         return new RunDetailResponse(1L, null, null,
                 List.of(new PolylinePoint(35.95, 126.68)),
-                10480, 3600, 343, null, null, started, finished);
+                10480, 3600, 343, null, null, started, finished, null);
     }
 
     @Test

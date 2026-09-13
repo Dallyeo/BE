@@ -2,7 +2,7 @@
 
 > 현재까지 구현된 API입니다. 🌐 = 공개(토큰 불필요), 🔒 = 인증 필요.
 > **U1-a/U2/U3(공개 조회) + U4(인증·사용자) + U5(러닝 기록) + U6(업적)** 완료.
-> **최근 변경**: 코스 경유지에서 자동 생성 이름(`경유지1` 등) 제거 · 러닝 기록 이미지 업로드(`POST /runs/{id}/image`) 추가 · 코스 `imageUrl` 추가 · `/places` **목록 3종에 `badges` 추가**. 사용자 코스 생성은 백엔드에 저장하지 않음(프론트/클라이언트 담당) — 사용자가 만든 경로는 러닝 기록의 `polyline`으로 저장됩니다.
+> **최근 변경**: 코스 경유지에서 자동 생성 이름(`경유지1` 등) 제거 · 러닝 기록 이미지 업로드(`POST /runs/{id}/image`) 추가 · 코스 `imageUrl` 추가 · `/places` **목록 3종에 `badges` 추가** · `/places` **목록 3종에 `businessHours`/`openHours` 추가**(원문 정리 + 대표 영업시간 분리) · `POST /runs` 응답에 **`newAchievements` 추가**(결과창 도장, 최초 달성만) · 업적 **8종 → 21종 확장** + 응답에 `category`/`sortOrder`/`iconOnUrl`/`iconOffUrl` 추가. 사용자 코스 생성은 백엔드에 저장하지 않음(프론트/클라이언트 담당) — 사용자가 만든 경로는 러닝 기록의 `polyline`으로 저장됩니다.
 
 - **Base URL**: `https://dallyeo.cloud` (개발 로컬: `http://localhost:8080`)
 - **Content-Type**: `application/json; charset=UTF-8`
@@ -153,6 +153,8 @@ GET /courses/{id}
   "latitude": 35.9755,      // null 가능(키워드/지역 목록에서 좌표 없는 경우)
   "longitude": 126.6801,
   "address": "전북특별자치도 군산시 군산창2길 48",
+  "businessHours": "12:00~21:00\n준비시간 14:00~17:00\n마지막 주문 20:30",  // null 가능
+  "openHours": "12:00~21:00",   // businessHours의 첫 항목(대표값). null 가능
   "thumbnailUrl": "https://.../image.jpg",  // null 가능
   "distanceMeters": 221.9,  // /places/nearby 에서만 값, 그 외 null
   "badges": ["MODEL_RESTAURANT"]  // 배지 없으면 [] (상세와 동일 형태)
@@ -160,6 +162,15 @@ GET /courses/{id}
 ```
 - `badges`는 목록(4.1/4.2/4.3)과 상세(4.4)가 **동일한 형태**입니다.
   목록 카드에 배지 칩을 그리려고 항목마다 `/places/{id}`를 추가 호출할 필요가 없습니다.
+- **`businessHours` / `openHours`** (목록·상세 동일 형태)
+  - `businessHours`: TourAPI 원문을 정리한 **전체 영업시간**. 항목 구분은 **개행(`\n`)** 입니다.
+    원문의 `<br>`·HTML 태그·글머리표(`- `)는 서버에서 제거합니다.
+  - `openHours`: 그중 **첫 항목**만 뽑은 대표 영업시간. 카드 한 줄(`63km · 12:00~21:00`)에는 이 값을 쓰세요.
+  - 정보가 없거나 조회하지 못하면 둘 다 `null` → 카드에서는 그 자리를 비우면 됩니다.
+  - ⚠️ 목록의 영업시간은 항목마다 외부 상세 API를 호출해 채웁니다. 캐시가 비어 있는 첫 호출은 **3~5초**,
+    이후 같은 조건은 **0.1초 미만**입니다(군산 음식점 109건 실측: 콜드 4.5s / 웜 0.05s).
+    드물게 첫 호출에서 일부가 `null`로 올 수 있고 다시 호출하면 채워지므로, `null`을 "영업시간 없음"으로
+    확정하지 말고 그냥 빈 자리로 처리해 주세요.
 
 ### 4.1 키워드 검색
 ```
@@ -190,6 +201,7 @@ GET /places/nearby?lat={위도}&lng={경도}&radius={미터}&category={카테고
     { "id": "914536", "name": "군산 해망굴", "category": "TOUR",
       "latitude": 35.9755, "longitude": 126.6801,
       "address": "전북특별자치도 군산시 군산창2길 48",
+      "businessHours": null, "openHours": null,
       "thumbnailUrl": null, "distanceMeters": null, "badges": [] }
   ]
 }
@@ -212,7 +224,8 @@ GET /places/{id}
     "latitude": 35.9755,
     "longitude": 126.6801,
     "address": "전북특별자치도 군산시 군산창2길 48",
-    "businessHours": "상시 개방",           // null 가능(정보 없거나 미지원 타입)
+    "businessHours": "상시 개방",           // null 가능(정보 없음). 여러 항목이면 개행(\n) 구분
+    "openHours": "상시 개방",               // businessHours의 첫 항목(대표값). null 가능
     "imageUrl": "https://.../image.jpg",   // null 가능
     "badges": ["GOOD_PRICE"]                // 배지 없으면 []
   }
@@ -395,12 +408,26 @@ POST /runs
     "averagePaceSeconds": 343,
     "imageUrl": null,
     "startedAt": "2026-07-09T07:00:00Z",
-    "finishedAt": "2026-07-09T08:00:00Z"
+    "finishedAt": "2026-07-09T08:00:00Z",
+    "newAchievements": [
+      { "code": "JJAMPPONG", "name": "짬뽕을 먹을 자격이 있는 자",
+        "description": "군산 짬뽕거리 코스를 완주한 사람",
+        "unlocked": true, "unlockedAt": "2026-07-09T08:00:01Z" }
+    ]
   }
 }
 ```
 > `completionRate`(완주율)는 아직 계산하지 않습니다(응답에서 생략). 계산 기준 확정 후 추가 예정.
 > `imageUrl`은 저장 직후엔 항상 비어 있습니다 — 이미지는 **7.2에서 별도로 업로드**합니다.
+
+#### 🏅 `newAchievements` — 러닝 결과창 도장
+- 이 러닝으로 **처음 달성한** 업적만 담깁니다. **결과창에 띄울 도장이 바로 이 배열**입니다.
+- **재달성은 절대 다시 오지 않습니다.** 같은 조건을 몇 번 더 채워도 두 번째부터는 항상 `[]` 입니다
+  (서버가 미달성 업적만 판정하고, DB에도 `(userId, achievement)` 유니크 제약이 있습니다).
+- 새로 달성한 게 없으면 **빈 배열** `[]` 입니다(필드는 항상 존재).
+- **저장(`POST /runs`) 응답에만 있습니다.** 조회(`GET /runs/{id}`, `GET /runs`)에는 이 필드 자체가 없어서,
+  지난 기록을 다시 열어도 도장이 재생되지 않습니다.
+- 항목 형태는 업적 목록(8.1)과 동일합니다 — 같은 `code`로 도장 이미지를 매칭하면 됩니다.
 
 ### 7.2 러닝 기록 이미지 업로드
 ```
@@ -479,27 +506,56 @@ GET /runs/{id}
 
 ## 8. 업적 (Achievements) 🔒  — 본인 기준
 
-> 러닝 기록을 기반으로 달성되는 업적(고정 8종). 판정 기준은 **완주한 코스(run.courseId)** — 자유 러닝(courseId 없음)은 집계에서 제외. 모든 요청에 `Authorization: Bearer {accessToken}` 필요.
+> 러닝 기록을 기반으로 달성되는 업적 **21종**. 모든 요청에 `Authorization: Bearer {accessToken}` 필요.
 
-### 업적 코드 목록
-| code | 업적명 | 달성 조건 |
-|---|---|---|
-| `GUNSAN_BEGINNER` | 군산 초보 러너 | 군산 코스로 러닝 1회 이상 |
-| `JJAMPPONG` | 짬뽕을 먹을 자격이 있는 자 | 군산 짬뽕거리 코스 완주 |
-| `GUNSAN_CONQUEROR` | 군산 런트립 정복자 | 군산 추천 코스 전부 완주 |
-| `JEONJU_BEGINNER` | 전주 초보 러너 | 전주 코스로 러닝 1회 이상 |
-| `JEONJU_CONQUEROR` | 전주 런트립 정복자 | 전주 추천 코스 전부 완주 |
-| `JEONJU_PILGRIM` | 전주 성지순례자 | 전주 천주교 성지 코스 완주 |
-| `NATURE_LOVER` | 자연을 사랑해! | 군산 편백나무 숲 코스 완주 |
-| `BETWEEN_WAVES` | 부숴지는 파도를 사이에서 | 군산 새만금 방파제 코스 완주 |
+### 도장 이미지
+- `iconOnUrl`(획득=컬러) / `iconOffUrl`(미획득=흑백)을 **둘 다** 내려줍니다. `unlocked` 값으로 골라 쓰세요.
+- 경로는 서버 절대경로이고 **인증 없이** 접근됩니다. 앞에 API base URL을 붙이면 됩니다
+  (예: `https://dallyeo.cloud/images/achievements/jjamppong_on.webp`).
+- 포맷은 **WebP** 450×450 투명배경. 21종 × 2상태 = 42장.
 
-> 업적은 `POST /runs`로 러닝을 저장할 때 **서버가 자동으로 판정·달성**합니다. 저장 후 목록(8.1)으로 새 달성 여부를 확인하세요.
+### 분류(`category`)
+- `GUNSAN` / `JEONJU` / `COMMON`. **`COMMON`은 지역 무관 업적**이라
+  코드 접두사로 지역을 판정하면 안 됩니다. 화면 지역 탭은 이 값으로 분기하세요.
+- `sortOrder`는 시안 순서(군산 → 전주 → 공통)이며, 목록은 **이미 이 순서로 정렬돼** 내려갑니다.
+
+### 업적 코드 목록 (21종)
+| code | 분류 | 업적명 | 달성 조건 |
+|---|---|---|---|
+| `GUNSAN_SEONYUDO` | GUNSAN | 선유도 짱 | 선유도 해변 런 완주 |
+| `GUNSAN_CONQUEROR` | GUNSAN | 군산 런트립 정복자 | 군산 추천 코스 전부 완주 |
+| `JJAMPPONG` | GUNSAN | 짬뽕을 먹을 자격이 있는 자 | 짬뽕런 완주 |
+| `GUNSAN_BEGINNER` | GUNSAN | 군산 초보 러너 | 군산 코스 1회 이상 완주 |
+| `NATURE_LOVER` | GUNSAN | 자연을 사랑해! | 편백나무 숲 런 완주 |
+| `BETWEEN_WAVES` | GUNSAN | 부숴지는 파도들 사이에서 | 새만금 방파제 런 완주 |
+| `JEONJU_CHERRY_BLOSSOM` | JEONJU | 천변벚꽃 | ⏸ 해당 코스 없음 — 기준 미확정 |
+| `JEONJU_BEGINNER` | JEONJU | 전주 초보 러너 | 전주 코스 1회 이상 완주 |
+| `JEONJU_DEOKJIN_LAKE` | JEONJU | 덕진 호수 | ⏸ 해당 코스 없음 — 기준 미확정 |
+| `JEONJU_CONQUEROR` | JEONJU | 전주 런트립 정복자 | 전주 추천 코스 전부 완주 |
+| `JEONJU_PILGRIM` | JEONJU | 전주 성지순례자 | 천주교 성지 코스 완주 |
+| `JEONJU_ECO_MUSEUM` | JEONJU | 전주 자연생태관 | ⏸ 해당 코스 없음 — 기준 미확정 |
+| `LONG_RUN_3H` | COMMON | 장기간 러닝 성공 | 단일 러닝 3시간 초과 |
+| `FINISH_10` | COMMON | 완주 10회 달성 | 누적 러닝 10회(자유 러닝 포함) |
+| `ICE_CREAM_RUNNER` | COMMON | 아이스크림 러너 | 한국시간 기준 12월에 완주 |
+| `DISTANCE_100KM` | COMMON | 100km 이상 | 누적 거리 100km 이상 |
+| `EARLY_BIRD` | COMMON | 얼리버드 | 한국시간 00:00~08:00 사이 시작 |
+| `WAYPOINT_3` | COMMON | 경유지 3개 지나감 | 경유지 3개 이상 코스 완주 |
+| `REST_TIME` | COMMON | 휴식타임 | ⏸ 도착지 정보 미수신 — 판정 불가 |
+| `SLOW_WALKER` | COMMON | 뚜벅이 | ⏸ 기준 페이스 미확정 |
+| `PIONEER` | COMMON | 개척자 | courseId 없는 러닝 완주 |
+
+> ⏸ 표시된 **5종은 판정 기준이 아직 확정되지 않아 자동 달성되지 않습니다.** 목록에는 나오지만
+> 항상 `unlocked: false` 입니다. 기준이 정해지면 서버만 고치면 되고 응답 형태는 그대로입니다.
+
+> 업적은 `POST /runs`로 러닝을 저장할 때 **서버가 자동으로 판정·달성**합니다.
+> **새로 달성한 업적은 저장 응답의 `newAchievements`로 바로 내려갑니다(7.1 참고)** — 결과창 도장은 그 값을 쓰세요.
+> 목록(8.1)을 다시 부를 필요가 없습니다.
 
 ### 8.1 업적 목록 조회
 ```
 GET /achievements
 ```
-- 전체 8종 + 본인 달성 여부/일시.
+- 전체 21종 + 본인 달성 여부/일시. **`sortOrder` 오름차순으로 정렬된 상태**로 내려갑니다.
 
 **Response 200**
 ```json
@@ -508,15 +564,23 @@ GET /achievements
   "data": [
     {
       "code": "JJAMPPONG",
+      "category": "GUNSAN",
+      "sortOrder": 30,
       "name": "짬뽕을 먹을 자격이 있는 자",
-      "description": "군산 짬뽕거리 코스를 완주한 사람",
+      "description": "군산의 짬뽕거리 코스를 완주했다.",
+      "iconOnUrl": "/images/achievements/jjamppong_on.webp",
+      "iconOffUrl": "/images/achievements/jjamppong_off.webp",
       "unlocked": true,
       "unlockedAt": "2026-07-09T07:35:10Z"
     },
     {
-      "code": "GUNSAN_CONQUEROR",
-      "name": "군산 런트립 정복자",
-      "description": "군산의 모든 추천 코스를 완주한 사람",
+      "code": "SLOW_WALKER",
+      "category": "COMMON",
+      "sortOrder": 200,
+      "name": "뚜벅이",
+      "description": "완주시 페이스가 키로당 몇분",
+      "iconOnUrl": "/images/achievements/slow_walker_on.webp",
+      "iconOffUrl": "/images/achievements/slow_walker_off.webp",
       "unlocked": false,
       "unlockedAt": null
     }
@@ -539,7 +603,7 @@ POST /achievements/{code}/unlock
 ## 9. 프론트 연동 시 주의사항
 
 1. **응답은 항상 `{success, data|error}` 래퍼** — `data`/`error`를 먼저 분기.
-2. **null 필드 존재** — 장소의 `latitude/longitude/thumbnailUrl/businessHours/imageUrl/distanceMeters`는 상황에 따라 `null`. UI에서 방어 처리 필요.
+2. **null 필드 존재** — 장소의 `latitude/longitude/thumbnailUrl/businessHours/openHours/imageUrl/distanceMeters`는 상황에 따라 `null`. UI에서 방어 처리 필요.
    - 러닝 `imageUrl`(업로드 전)과 코스 `imageUrl`(이미지 미등록)도 마찬가지로 비어 있을 수 있습니다.
    - 반면 `badges`는 **항상 배열**입니다 — 매칭이 없으면 `null`이 아니라 `[]`.
 3. **502 재시도** — `/places/*`(검색/목록/반경/상세)는 외부 API라 간헐 502 가능 → 1~2회 재시도 로직 권장. `/regions`, `/courses*`는 DB라 502 없음.
@@ -560,8 +624,12 @@ POST /achievements/{code}/unlock
 | 사용자 프로필·온보딩·탈퇴 (🔒) | ✅ **U4 완료** |
 | 러닝 기록 저장·목록·상세 `POST/GET /runs` (🔒) | ✅ **U5 완료** |
 | 러닝 기록 이미지 업로드 `POST /runs/{id}/image` (🔒) | ✅ **완료** |
+| 결과창 업적 도장 `newAchievements` (🔒) | ✅ **완료**(최초 달성만, 저장 응답 전용) |
+| 업적 21종 + 도장 이미지 서빙 | ✅ **완료**(16종 자동판정 / 5종 기준 미확정) |
 | 코스 대표 이미지 `imageUrl` | ⏳ 필드/서빙 완료 — **이미지 파일 수급 대기** |
 | `/places` 목록 3종 `badges` | ✅ **완료**(상세와 동일 형태) |
+| `/places` 목록 3종 `businessHours` | ✅ **완료**(상세와 동일 형태, 개행 구분) |
+| 대표 영업시간 `openHours` 분리 | ✅ **완료**(목록·상세 모두) |
 | 업적 목록·달성 `GET /achievements`, `POST /achievements/{code}/unlock` (🔒) | ✅ **U6 완료** |
 | 사용자 코스 생성 `POST /courses` (🔒) | 백엔드 저장 안 함(프론트 담당) — 러닝 `polyline`으로 보관 |
 | 러닝 기록 수정·삭제 / 완주율·통계 / 업적 진행률 | 후속(백로그) |

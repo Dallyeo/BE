@@ -16,6 +16,7 @@ import tools.jackson.databind.jsontype.PolymorphicTypeValidator;
 
 /**
  * Redis 캐시 설정 (D3: @Cacheable 추상화, BR-6: TTL 30분+).
+ * 영업시간 캐시({@code tourApiDetailIntro})만 별도 TTL — 아래 withCacheConfiguration 참고.
  * 키=String, 값=JSON(타입정보 포함). null 값 캐싱 비활성(실패/빈 예외 캐시 방지).
  *
  * <p><b>기본 타입 활성화 필수</b>: 활성화하지 않으면 캐시 HIT 시 DTO(record)가 LinkedHashMap으로
@@ -45,8 +46,11 @@ public class CacheConfig {
                         .fromSerializer(new StringRedisSerializer()))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair
                         .fromSerializer(valueSerializer));
+        // detailIntro2(영업시간)만 TTL을 길게 — 목록 채우기가 항목당 1회 호출이라 일일 한도가 실질 제약이고,
+        // 영업시간은 하루 단위로 바뀌지 않는다. 나머지 캐시는 기본 TTL 유지.
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(cacheConfig)
+                .withCacheConfiguration("tourApiDetailIntro", cacheConfig.entryTtl(props.introCacheTtl()))
                 .build();
     }
 }

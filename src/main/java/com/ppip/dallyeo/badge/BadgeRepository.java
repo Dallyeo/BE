@@ -17,7 +17,4 @@ public interface BadgeRepository extends JpaRepository<Badge, Long> {
      * 복합 인덱스의 선행 컬럼이 normalizedName이라 이 IN 조회가 인덱스를 그대로 탄다.
      */
     List<Badge> findByNormalizedNameIn(Collection<String> normalizedNames);
-
-    boolean existsByTypeAndNormalizedNameAndNormalizedAddress(
-            BadgeType type, String normalizedName, String normalizedAddress);
 }

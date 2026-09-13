@@ -8,6 +8,7 @@ import com.ppip.dallyeo.external.tourapi.dto.TourItem;
 import com.ppip.dallyeo.external.tourapi.dto.TourCommon;
 import com.ppip.dallyeo.external.tourapi.dto.TourIntro;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,7 +65,7 @@ public class TourApiClient {
     }
 
     @SuppressWarnings("unused")
-    private List<TourItem> areaBasedFallback(LDongCode region, Integer contentTypeId,
+    List<TourItem> areaBasedFallback(LDongCode region, Integer contentTypeId,
                                              int pageNo, int numOfRows, Throwable t) {
         log.warn("TourAPI areaBasedList2 fallback (regnCd={}, signguCd={}): {}",
                 region.lDongRegnCd(), region.lDongSignguCd(), t.toString());
@@ -91,7 +92,7 @@ public class TourApiClient {
     }
 
     @SuppressWarnings("unused")
-    private List<TourItem> searchKeywordFallback(String keyword, LDongCode region, Integer contentTypeId,
+    List<TourItem> searchKeywordFallback(String keyword, LDongCode region, Integer contentTypeId,
                                                  int pageNo, int numOfRows, Throwable t) {
         log.warn("TourAPI searchKeyword2 fallback (keyword={}): {}", keyword, t.toString());
         throw new ExternalApiException("TourAPI 키워드 검색에 실패했습니다.", t);
@@ -115,7 +116,7 @@ public class TourApiClient {
     }
 
     @SuppressWarnings("unused")
-    private List<TourItem> locationBasedFallback(double mapX, double mapY, int radius, Integer contentTypeId,
+    List<TourItem> locationBasedFallback(double mapX, double mapY, int radius, Integer contentTypeId,
                                                  int pageNo, int numOfRows, Throwable t) {
         log.warn("TourAPI locationBasedList2 fallback (x={}, y={}, r={}): {}", mapX, mapY, radius, t.toString());
         throw new ExternalApiException("TourAPI 주변 장소 조회에 실패했습니다.", t);
@@ -134,7 +135,7 @@ public class TourApiClient {
     }
 
     @SuppressWarnings("unused")
-    private TourCommon detailCommonFallback(String contentId, Throwable t) {
+    TourCommon detailCommonFallback(String contentId, Throwable t) {
         log.warn("TourAPI detailCommon2 fallback (contentId={}): {}", contentId, t.toString());
         throw new ExternalApiException("TourAPI 장소 상세(개요) 조회에 실패했습니다.", t);
     }
@@ -144,6 +145,44 @@ public class TourApiClient {
     @Retry(name = "tourApiDetailIntro", fallbackMethod = "detailIntroFallback")
     @CircuitBreaker(name = "tourApiDetailIntro", fallbackMethod = "detailIntroFallback")
     public TourIntro detailIntro(String contentId, int contentTypeId) {
+        return fetchIntro(contentId, contentTypeId);
+    }
+
+    @SuppressWarnings("unused")
+    TourIntro detailIntroFallback(String contentId, int contentTypeId, Throwable t) {
+        log.warn("TourAPI detailIntro2 fallback (contentId={}, typeId={}): {}", contentId, contentTypeId, t.toString());
+        throw new ExternalApiException("TourAPI 장소 상세(소개) 조회에 실패했습니다.", t);
+    }
+
+    // ===== 상세 소개 — 목록 채우기 전용 (best-effort) =====
+
+    /**
+     * 목록 응답의 영업시간 채우기용 detailIntro2.
+     *
+     * <p>{@link #detailIntro}와 <b>캐시는 공유</b>하되(같은 cacheName/key) 회복성 인스턴스는 분리한다.
+     * 목록은 한 요청에 수십~수백 건을 몰아 부르므로, 그 실패가 사용자 상세 화면({@code /places/{id}})의
+     * 서킷까지 열어 버리면 안 된다. 실제로 공유 서킷으로 두면 목록 한 번에 서킷이 OPEN 되어
+     * 상세 조회가 통째로 막혔다.
+     *
+     * <p>차이점 세 가지:
+     * <ul>
+     *   <li>전용 서킷 {@code tourApiDetailIntroBulk} — 상세 화면과 격리</li>
+     *   <li>{@code @RateLimiter} — 공공데이터포털 <b>초당 요청 제한</b>(429 LIMITED_NUMBER…) 회피.
+     *       재시도는 붙이지 않는다(부하만 2배가 되고 429를 악화시킨다)</li>
+     *   <li>실패 시 예외 대신 <b>null</b> — 영업시간은 있으면 좋은 값이라 목록을 실패시키지 않는다.
+     *       null은 캐시하지 않으므로({@code unless}) 다음 호출에서 다시 시도된다</li>
+     * </ul>
+     */
+    @Cacheable(cacheNames = "tourApiDetailIntro", key = "'intro:' + #contentId + ':' + #contentTypeId",
+            unless = "#result == null")
+    @RateLimiter(name = "tourApiDetailIntroBulk", fallbackMethod = "detailIntroBulkFallback")
+    @CircuitBreaker(name = "tourApiDetailIntroBulk", fallbackMethod = "detailIntroBulkFallback")
+    public TourIntro detailIntroBulk(String contentId, int contentTypeId) {
+        return fetchIntro(contentId, contentTypeId);
+    }
+
+    /** detailIntro/detailIntroBulk 공통 본문 — 차이는 회복성·캐시 정책뿐이다. */
+    private TourIntro fetchIntro(String contentId, int contentTypeId) {
         Map<String, String> p = commonParams();
         p.put("contentId", contentId);
         p.put("contentTypeId", String.valueOf(contentTypeId));
@@ -151,10 +190,11 @@ public class TourApiClient {
         return item == null ? new TourIntro(null, null, null, null) : normalizer.toIntro(item, contentTypeId);
     }
 
+    /** 목록 채우기 실패는 조용히 null — 영업시간 하나 때문에 목록이 죽으면 안 된다. */
     @SuppressWarnings("unused")
-    private TourIntro detailIntroFallback(String contentId, int contentTypeId, Throwable t) {
-        log.warn("TourAPI detailIntro2 fallback (contentId={}, typeId={}): {}", contentId, contentTypeId, t.toString());
-        throw new ExternalApiException("TourAPI 장소 상세(소개) 조회에 실패했습니다.", t);
+    TourIntro detailIntroBulkFallback(String contentId, int contentTypeId, Throwable t) {
+        log.debug("TourAPI detailIntro2(bulk) skipped (contentId={}): {}", contentId, t.toString());
+        return null;
     }
 
     // ===== 공통 유틸 =====

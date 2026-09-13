@@ -80,6 +80,31 @@ curl -s localhost:8080/actuator/health      # {"status":"UP"} 확인
 - **헬스 실패 시**: 트래픽 전환하지 않고 새 인스턴스만 내림 → **기존 버전이 계속 서빙**(자동 안전 롤백).
 - 수동 롤백: 직전 릴리스 JAR 로 `sudo /opt/dallyeo/deploy.sh /opt/dallyeo/releases/<이전>.jar`.
 
+## 스키마 마이그레이션 (`ddl-auto=update` 가 못 하는 변경)
+`ddl-auto=update` 는 **테이블·컬럼 추가만** 합니다. 기존 컬럼의 타입/길이 변경은 하지 않으므로,
+그런 변경이 필요한 배포는 **코드 배포 전에 SQL 을 손으로 적용**해야 합니다.
+
+```bash
+ssh <EC2_USER>@<EC2_HOST>
+
+# 1) 백업 (해당 테이블만)
+sudo mysqldump -u root -p dallyeo user_achievement \
+  > ~/user_achievement.$(date +%Y%m%d%H%M).sql
+
+# 2) 적용 — 로컬 레포의 SQL 을 붙여넣거나 scp 로 올려서 실행
+sudo mysql -u root -p dallyeo < migrate-user-achievement-varchar.sql
+
+# 3) 확인
+sudo mysql -u root -p dallyeo -e "SHOW COLUMNS FROM user_achievement LIKE 'achievement'"
+```
+
+**순서**: 마이그레이션 → 그다음 `main` push(자동 배포). 반대로 하면 그 사이에 들어온 요청이 실패합니다.
+
+**적용 이력**
+| 날짜 | 파일 | 내용 | 이유 |
+|---|---|---|---|
+| 2026-09-13 | `migrate-user-achievement-varchar.sql` | `user_achievement.achievement` enum → `VARCHAR(40)` | 업적 8종→21종 확장. Hibernate 가 만든 네이티브 enum 컬럼이 옛 8종만 허용해 신규 업적 저장이 500 으로 실패 |
+
 ## 주의
 - `spring.jpa.hibernate.ddl-auto=update`: 블루·그린이 같은 스키마 공유 → 컬럼 삭제/변경형 배포는 위험. 추가형만 안전. 운영 안정화 시 Flyway 전환 권장.
 - 응답 구조가 바뀌는 배포에서는 Redis 캐시 키 버저닝 또는 flush 고려.
