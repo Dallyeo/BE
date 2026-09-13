@@ -376,6 +376,9 @@ DELETE /users/me
 ## 7. 러닝 기록 (Runs) 🔒  — 본인 기록만
 
 > 클라이언트가 추적을 끝낸 **완료 데이터**만 저장합니다(실시간 소켓 없음). 모든 요청에 `Authorization: Bearer {accessToken}` 필요.
+>
+> 저장은 **`multipart/form-data` 한 번**으로 기록 + 코스 이미지를 함께 보냅니다(7.1). 전체 경로(polyline)는
+> 보내지 않고 **출발·도착 좌표 2점**만 저장하며, 경로 그림은 클라이언트가 렌더링한 코스 이미지가 대신합니다.
 
 ### 7.1 러닝 기록 저장
 ```
@@ -448,8 +451,8 @@ Content-Type: multipart/form-data
 POST /runs/{id}/image
 Content-Type: multipart/form-data
 ```
-러닝을 저장(7.1)해서 받은 `id`로 기록 이미지를 올립니다. **2단계 흐름**입니다:
-`POST /runs` 로 기록 저장 → 응답의 `id` → `POST /runs/{id}/image` 로 이미지 첨부.
+이미 저장된 기록의 **이미지를 교체**합니다. 최초 이미지는 저장(7.1) 때 함께 올리므로
+이 엔드포인트는 **다시 올릴 때만** 쓰면 됩니다(7.1 의 `id` 사용).
 
 **Request (multipart/form-data)**
 
@@ -460,7 +463,7 @@ Content-Type: multipart/form-data
 - 허용 형식: `image/jpeg`, `image/png`, `image/webp`, `image/heic`, `image/heif`. 그 외 → **400**
 - 최대 크기: **10MB**. 초과 → **400**
 - 본인 기록만. 타인의 기록이거나 존재하지 않으면 **404**
-- 이미 이미지가 있으면 **새 파일로 교체**되고 이전 파일은 서버에서 삭제됩니다(재호출로 재업로드 가능).
+- 기존 파일은 서버에서 삭제되고 **새 파일로 교체**됩니다(몇 번이든 재호출 가능).
 
 **Response 200** — 7.1과 동일 구조이며 `imageUrl`이 채워져 돌아옵니다.
 ```json
@@ -474,7 +477,7 @@ Content-Type: multipart/form-data
     "end":   { "lat": 35.96, "lng": 126.69 },
     "distanceMeters": 10480,
     "durationSeconds": 3600,
-    "averagePaceSeconds": 343,
+    "averagePaceSeconds": 344,
     "imageUrl": "/uploads/runs/3f2a....jpg",
     "startedAt": "2026-07-09T07:00:00Z",
     "finishedAt": "2026-07-09T08:00:00Z"
