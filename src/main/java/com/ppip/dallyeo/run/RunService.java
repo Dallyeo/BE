@@ -1,6 +1,7 @@
 package com.ppip.dallyeo.run;
 
 import com.ppip.dallyeo.achievement.AchievementService;
+import com.ppip.dallyeo.achievement.dto.AchievementResponse;
 import com.ppip.dallyeo.common.exception.BusinessException;
 import com.ppip.dallyeo.common.exception.ErrorCode;
 import com.ppip.dallyeo.common.storage.ImageStorage;
@@ -15,7 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 
@@ -61,9 +62,11 @@ public class RunService {
                 .finishedAt(request.finishedAt())
                 .build();
         Run saved = runRepository.save(run);
-        // 러닝 저장 시 업적 자동 판정·달성(U6, Q1). 응답 형태는 U5 그대로 유지.
-        achievementService.evaluateAndUnlock(userId);
-        return toDetail(saved);
+        // 러닝 저장 시 업적 자동 판정·달성(U6, Q1).
+        // 이번에 "처음" 달성한 업적만 돌아오며, 이걸 결과창 도장으로 응답에 싣는다.
+        // 재달성은 여기서 이미 걸러지므로 도장이 두 번 뜨지 않는다.
+        List<AchievementResponse> newAchievements = achievementService.evaluateAndUnlock(userId);
+        return toDetail(saved).withAchievements(newAchievements);
     }
 
     /** 러닝 기록 목록 (US-RUN-2). 본인만, 기간(ISO date) 선택, 최신순. */
@@ -121,7 +124,8 @@ public class RunService {
                 run.getImageUrl(),
                 null,
                 run.getStartedAt(),
-                run.getFinishedAt());
+                run.getFinishedAt(),
+                null);   // 도장은 저장 응답에서만 — withAchievements 참고
     }
 
     private RunSummaryResponse toSummary(Run run) {
@@ -144,20 +148,23 @@ public class RunService {
                 .orElse(null);
     }
 
-    /** from(ISO date) → 해당일 00:00:00 UTC. 파싱 실패 → 400. */
+    /** from(ISO date) → 해당일 00:00:00 한국시간. 파싱 실패 → 400. */
+    /** 날짜 경계는 한국시간 기준 — 사용자가 화면에서 보는 '날짜'와 어긋나면 안 된다. */
+    private static final ZoneId KST = ZoneId.of(com.ppip.dallyeo.DallyeoApplication.ZONE);
+
     private Instant parseFromDate(String from) {
         if (from == null || from.isBlank()) {
             return null;
         }
-        return parseDate(from, "from").atStartOfDay(ZoneOffset.UTC).toInstant();
+        return parseDate(from, "from").atStartOfDay(KST).toInstant();
     }
 
-    /** to(ISO date) → 해당일 23:59:59.999... UTC(포함). 파싱 실패 → 400. */
+    /** to(ISO date) → 해당일 23:59:59.999... 한국시간(포함). 파싱 실패 → 400. */
     private Instant parseToDate(String to) {
         if (to == null || to.isBlank()) {
             return null;
         }
-        return parseDate(to, "to").atTime(LocalTime.MAX).toInstant(ZoneOffset.UTC);
+        return parseDate(to, "to").atTime(LocalTime.MAX).atZone(KST).toInstant();
     }
 
     private LocalDate parseDate(String value, String field) {

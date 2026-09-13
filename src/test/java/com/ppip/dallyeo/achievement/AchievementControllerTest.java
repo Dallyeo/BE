@@ -17,11 +17,18 @@ class AchievementControllerTest {
     private final AchievementService achievementService = mock(AchievementService.class);
     private final AchievementController controller = new AchievementController(achievementService);
 
+    private AchievementResponse response(String code, boolean unlocked) {
+        return new AchievementResponse(code, "GUNSAN", 30, "이름", "설명",
+                "/images/achievements/" + code.toLowerCase() + "_on.webp",
+                "/images/achievements/" + code.toLowerCase() + "_off.webp",
+                unlocked, unlocked ? Instant.now() : null);
+    }
+
     @Test
     void list_delegates() {
         List<AchievementResponse> list = List.of(
-                new AchievementResponse("JJAMPPONG", "짬뽕을 먹을 자격이 있는 자", "군산 짬뽕거리 코스를 완주한 사람", true, Instant.now()),
-                new AchievementResponse("GUNSAN_CONQUEROR", "군산 런트립 정복자", "군산의 모든 추천 코스를 완주한 사람", false, null));
+                response("JJAMPPONG", true),
+                response("GUNSAN_CONQUEROR", false));
         when(achievementService.list(7L)).thenReturn(list);
 
         ApiResponse<List<AchievementResponse>> res = controller.list(7L);
@@ -32,7 +39,7 @@ class AchievementControllerTest {
 
     @Test
     void unlock_delegates() {
-        AchievementResponse r = new AchievementResponse("JJAMPPONG", "짬뽕을 먹을 자격이 있는 자", "군산 짬뽕거리 코스를 완주한 사람", true, Instant.now());
+        AchievementResponse r = response("JJAMPPONG", true);
         when(achievementService.unlock(7L, "JJAMPPONG")).thenReturn(r);
 
         ApiResponse<AchievementResponse> res = controller.unlock(7L, "JJAMPPONG");

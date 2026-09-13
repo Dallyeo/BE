@@ -1,5 +1,6 @@
 package com.ppip.dallyeo.place;
 
+import com.ppip.dallyeo.common.util.BusinessHoursText;
 import com.ppip.dallyeo.domain.category.CategoryMapper;
 import com.ppip.dallyeo.domain.category.CategoryType;
 import com.ppip.dallyeo.external.tourapi.dto.TourCommon;
@@ -24,12 +25,16 @@ public class PlaceMapper {
         this.categoryMapper = categoryMapper;
     }
 
-    /** 배지는 여기서 채우지 않는다(빈 배열) — 목록은 PlaceService가 일괄 조회로 부착한다. */
+    /**
+     * 배지·영업시간은 여기서 채우지 않는다(null/빈 배열).
+     * 목록 응답의 두 값은 PlaceService가 각각 DB 일괄 조회·detailIntro2 병렬 조회로 뒤에 부착한다.
+     */
     public PlaceSummary toSummary(TourItem item) {
         CategoryType category = categoryMapper.map(item.contentTypeId(), item.lclsSystm2()).type();
         return new PlaceSummary(
                 item.contentId(), item.title(), category,
                 item.latitude(), item.longitude(), item.address(),
+                null, null,
                 item.thumbnailUrl(), item.distanceMeters(), List.of());
     }
 
@@ -43,10 +48,11 @@ public class PlaceMapper {
      */
     public PlaceDetail toDetail(TourCommon common, TourIntro intro, int contentTypeId, List<String> badges) {
         CategoryType category = categoryMapper.map(contentTypeId, null).type();
+        String hours = intro == null ? null : intro.businessHours();
         return new PlaceDetail(
                 common.contentId(), common.title(), category,
                 common.latitude(), common.longitude(), common.address(),
-                intro == null ? null : intro.businessHours(),
+                hours, BusinessHoursText.first(hours),
                 common.imageUrl(), badges);
     }
 }

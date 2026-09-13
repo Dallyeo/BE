@@ -41,4 +41,53 @@ class AddressNormalizerTest {
         assertThat(normalizer.normalizeName(null)).isEmpty();
         assertThat(normalizer.normalizeAddress(null)).isEmpty();
     }
+
+    // ===== 상세주소(층/호) 절단 — 공공데이터 CSV ↔ TourAPI 표기 차이 흡수 =====
+
+    @Test
+    void cutsDetailAddressAfterComma() {
+        // CSV "…, 1층" 과 TourAPI "…" 가 같은 키로 정규화되어야 매칭된다.
+        assertThat(normalizer.normalizeAddress("전북특별자치도 군산시 수송남로 2, 1층"))
+                .isEqualTo(normalizer.normalizeAddress("전북특별자치도 군산시 수송남로 2"))
+                .isEqualTo("전북군산시수송남로2");
+    }
+
+    @Test
+    void cutsUnitNumbersAfterComma() {
+        assertThat(normalizer.normalizeAddress("전북특별자치도 군산시 수송로 315, 101호,102호 (미장동)"))
+                .isEqualTo("전북군산시수송로315");
+    }
+
+    @Test
+    void handlesParenthesizedFloorWithoutEatingBuildingNumber() {
+        // "(1,2)층" 을 일반 괄호 제거로 먼저 지우면 "15 층"이 남아 건물번호까지 깎이는 함정.
+        assertThat(normalizer.normalizeAddress("전북특별자치도 군산시 하나운1길 15 (1,2)층 (나운동)"))
+                .isEqualTo(normalizer.normalizeAddress("전북특별자치도 군산시 하나운1길 15 (나운동)"))
+                .isEqualTo("전북군산시하나운1길15");
+    }
+
+    @Test
+    void keepsBuildingNumberWithHyphenAndFloorSuffix() {
+        assertThat(normalizer.normalizeAddress("전북특별자치도 군산시 은파순환길 174-4,2층(미룡동)"))
+                .isEqualTo("전북군산시은파순환길1744");
+    }
+
+    @Test
+    void handlesNestedParenthesesInDongField() {
+        assertThat(normalizer.normalizeAddress("전북특별자치도 군산시 백토로 284-8 (나운동, (1층, 2층))"))
+                .isEqualTo("전북군산시백토로2848");
+    }
+
+    @Test
+    void differentBuildingNumbersStayDistinct() {
+        // 상세주소만 잘라낼 뿐 도로명+건물번호는 그대로 비교 → 다른 건물이 뭉치지 않는다.
+        assertThat(normalizer.normalizeAddress("전북 군산시 수송로 315, 1층"))
+                .isNotEqualTo(normalizer.normalizeAddress("전북 군산시 수송로 316, 1층"));
+    }
+
+    @Test
+    void addressWithoutCommaIsUnchanged() {
+        assertThat(normalizer.normalizeAddress("전북특별자치도 군산시 경암5길 63"))
+                .isEqualTo("전북군산시경암5길63");
+    }
 }

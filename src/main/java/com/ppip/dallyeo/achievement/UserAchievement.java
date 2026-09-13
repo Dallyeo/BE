@@ -11,6 +11,8 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -40,8 +42,15 @@ public class UserAchievement {
     @Column(nullable = false)
     private Long userId;
 
+    /**
+     * VARCHAR로 고정한다. 그냥 두면 Hibernate MySQL 방언이 네이티브 {@code enum('A','B',…)} 컬럼을
+     * 만드는데, {@code ddl-auto=update}는 <b>기존 컬럼 정의를 바꾸지 않아</b> 업적을 추가해도
+     * 컬럼은 옛 목록 그대로다 → 새 코드 저장 시 "Data truncated" 로 실패한다(실제로 겪음).
+     * VARCHAR면 카탈로그가 늘어나도 DDL 변경이 필요 없다.
+     */
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(nullable = false, length = 40)
     private AchievementType achievement;
 
     private Instant unlockedAt;

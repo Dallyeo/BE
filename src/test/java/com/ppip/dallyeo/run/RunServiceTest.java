@@ -1,5 +1,6 @@
 package com.ppip.dallyeo.run;
 
+import com.ppip.dallyeo.achievement.dto.AchievementResponse;
 import com.ppip.dallyeo.common.exception.BusinessException;
 import com.ppip.dallyeo.common.exception.ErrorCode;
 import com.ppip.dallyeo.course.Course;
@@ -202,5 +203,50 @@ class RunServiceTest {
 
         assertThat(service.getDetail(7L, 1L).imageUrl()).isEqualTo("/uploads/runs/abc.jpg");
         assertThat(service.list(7L, null, null).get(0).imageUrl()).isEqualTo("/uploads/runs/abc.jpg");
+    }
+    // ===== 결과창 도장 (POST /runs 응답에만, 최초 달성만) =====
+
+    private void stubSavedRun() {
+        when(runRepository.save(any(Run.class))).thenAnswer(inv -> {
+            Run r = inv.getArgument(0);
+            r.setId(1L);
+            return r;
+        });
+    }
+
+    @Test
+    void save_carriesNewlyUnlockedAchievementsForResultScreen() {
+        stubSavedRun();
+        when(achievementService.evaluateAndUnlock(7L)).thenReturn(List.of(
+                new AchievementResponse("JJAMPPONG", "GUNSAN", 30, "짬뽕을 먹을 자격이 있는 자", "설명",
+                        "/images/achievements/jjamppong_on.webp", "/images/achievements/jjamppong_off.webp",
+                        true, started)));
+
+        RunDetailResponse res = service.save(7L, request("gunsan-jjamppong-run", started, finished));
+
+        assertThat(res.newAchievements()).extracting(AchievementResponse::code).containsExactly("JJAMPPONG");
+    }
+
+    @Test
+    void save_noNewAchievement_returnsEmptyNotNull() {
+        // 이미 달성한 조건을 다시 채운 경우 — 도장이 뜨면 안 된다(빈 배열).
+        stubSavedRun();
+        when(achievementService.evaluateAndUnlock(7L)).thenReturn(List.of());
+
+        RunDetailResponse res = service.save(7L, request("gunsan-jjamppong-run", started, finished));
+
+        assertThat(res.newAchievements()).isNotNull().isEmpty();
+    }
+
+    @Test
+    void getDetail_neverCarriesAchievements() {
+        // 지난 기록을 다시 열어도 도장이 재생되면 안 된다 → 조회 응답엔 아예 없음(null → 직렬화 제외).
+        Run run = Run.builder().id(1L).userId(7L).courseId("gunsan-jjamppong-run")
+                .polyline(List.of(new PolylinePoint(35.95, 126.68)))
+                .distanceMeters(10480).durationSeconds(3600).averagePaceSeconds(343)
+                .startedAt(started).finishedAt(finished).build();
+        when(runRepository.findById(1L)).thenReturn(Optional.of(run));
+
+        assertThat(service.getDetail(7L, 1L).newAchievements()).isNull();
     }
 }

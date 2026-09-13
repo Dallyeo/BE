@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.ppip.dallyeo.common.util.BusinessHoursText;
 import com.ppip.dallyeo.external.tourapi.dto.TourItem;
 import com.ppip.dallyeo.external.tourapi.dto.TourCommon;
 import com.ppip.dallyeo.external.tourapi.dto.TourIntro;
@@ -135,28 +136,64 @@ public class TourApiNormalizer {
     }
 
     /**
-     * detailIntro2 항목 → TourIntro. contentTypeId별 필드가 다름(BR-U3-6):
-     * 12(관광지)=usetime/restdate/parking/infocenter, 39(음식점)=opentimefood/restdatefood/parking/infocenterfood.
-     * 그 외 타입은 businessHours 등을 시도하지 않고 null (미매핑 WARN).
+     * detailIntro2 항목 → TourIntro. contentTypeId별로 필드명이 전부 다르다(BR-U3-6).
+     * 목록 응답에도 businessHours를 싣게 되면서 관광지/음식점 외 타입도 매핑한다
+     * (미매핑이면 목록 카드 둘째 줄이 타입별로 비어 버린다).
+     *
+     * <p>businessHours는 {@link BusinessHoursText#normalize} 로 정리해 <b>개행 구분</b>으로 돌려준다.
+     * 숙박(32)은 영업시간 개념이 없어 체크인/체크아웃을 대신 싣는다.
      */
     public TourIntro toIntro(JsonNode raw, int contentTypeId) {
         return switch (contentTypeId) {
-            case 12 -> new TourIntro(
-                    nullIfBlank(text(raw, "usetime")),
+            case 12 -> intro(raw, "usetime", "restdate", "parking", "infocenter");
+            case 14 -> intro(raw, "usetimeculture", "restdateculture", "parkingculture", "infocenterculture");
+            case 15 -> intro(raw, "playtime", null, "parkingfestival", "sponsor1tel");
+            case 25 -> intro(raw, null, null, null, "infocentertourcourse");
+            case 28 -> intro(raw, "usetimeleports", "restdateleports", "parkingleports", "infocenterleports");
+            case 32 -> new TourIntro(
+                    stayHours(raw),
                     nullIfBlank(text(raw, "restdate")),
-                    nullIfBlank(text(raw, "parking")),
-                    nullIfBlank(text(raw, "infocenter")));
-            case 39 -> new TourIntro(
-                    nullIfBlank(text(raw, "opentimefood")),
-                    nullIfBlank(text(raw, "restdatefood")),
-                    nullIfBlank(text(raw, "parkingfood")),
-                    nullIfBlank(text(raw, "infocenterfood")));
+                    nullIfBlank(text(raw, "parkinglodging")),
+                    nullIfBlank(text(raw, "infocenterlodging")));
+            case 38 -> intro(raw, "opentime", "restdateshopping", "parkingshopping", "infocentershopping");
+            case 39 -> intro(raw, "opentimefood", "restdatefood", "parkingfood", "infocenterfood");
             default -> {
                 // BR-U3-6: 미매핑 타입 → businessHours 등 null + WARN(신규 타입 인지)
                 log.warn("TourAPI detailIntro2 unmapped contentTypeId={} -> businessHours null", contentTypeId);
                 yield new TourIntro(null, null, null, null);
             }
         };
+    }
+
+    /** 타입별 필드명만 갈아끼우는 공통 조립. 필드명이 null이면 해당 값도 null. */
+    private TourIntro intro(JsonNode raw, String hoursField, String restField,
+                            String parkingField, String inquiryField) {
+        return new TourIntro(
+                BusinessHoursText.normalize(field(raw, hoursField)),
+                nullIfBlank(field(raw, restField)),
+                nullIfBlank(field(raw, parkingField)),
+                nullIfBlank(field(raw, inquiryField)));
+    }
+
+    /** 숙박(32): 영업시간 대신 체크인/체크아웃. 둘 다 없으면 null. */
+    private String stayHours(JsonNode raw) {
+        String in = nullIfBlank(text(raw, "checkintime"));
+        String out = nullIfBlank(text(raw, "checkouttime"));
+        if (in == null && out == null) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        if (in != null) {
+            sb.append("체크인 ").append(in);
+        }
+        if (out != null) {
+            sb.append(sb.length() > 0 ? " / " : "").append("체크아웃 ").append(out);
+        }
+        return BusinessHoursText.normalize(sb.toString());
+    }
+
+    private String field(JsonNode raw, String name) {
+        return name == null ? null : text(raw, name);
     }
 
     /** homepage 필드의 &lt;a href="..."&gt; 에서 URL만 추출. 태그 없으면 원문 반환. */

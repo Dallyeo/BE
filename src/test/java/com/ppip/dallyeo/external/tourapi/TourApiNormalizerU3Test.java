@@ -56,4 +56,34 @@ class TourApiNormalizerU3Test {
         TourIntro intro = normalizer.toIntro(raw, 99);   // 미매핑 타입
         assertThat(intro.businessHours()).isNull();
     }
+    @Test
+    void toIntro_restaurant_brTagsBecomeNewlines() {
+        // 등대로(1305903) 실제 형태: 항목 구분이 <br>뿐이라 태그만 지우면 한 줄로 뭉개진다.
+        JsonNode raw = node("{\"opentimefood\":\"- 12:00~21:00<br>- 준비시간 14:00~17:00<br />- 마지막 주문 20:30\"}");
+
+        TourIntro intro = normalizer.toIntro(raw, 39);
+
+        assertThat(intro.businessHours())
+                .isEqualTo("12:00~21:00\n준비시간 14:00~17:00\n마지막 주문 20:30");
+    }
+
+    @Test
+    void toIntro_cultureType14_usesUsetimeculture() {
+        JsonNode raw = node("{\"usetimeculture\":\"09:00~18:00\",\"restdateculture\":\"월요일\"}");
+        TourIntro intro = normalizer.toIntro(raw, 14);
+        assertThat(intro.businessHours()).isEqualTo("09:00~18:00");
+        assertThat(intro.restDate()).isEqualTo("월요일");
+    }
+
+    @Test
+    void toIntro_shoppingType38_usesOpentime() {
+        JsonNode raw = node("{\"opentime\":\"10:00~20:00\"}");
+        assertThat(normalizer.toIntro(raw, 38).businessHours()).isEqualTo("10:00~20:00");
+    }
+
+    @Test
+    void toIntro_stayType32_usesCheckInOut() {
+        JsonNode raw = node("{\"checkintime\":\"15:00\",\"checkouttime\":\"11:00\"}");
+        assertThat(normalizer.toIntro(raw, 32).businessHours()).isEqualTo("체크인 15:00 / 체크아웃 11:00");
+    }
 }

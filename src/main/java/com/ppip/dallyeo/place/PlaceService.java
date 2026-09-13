@@ -7,9 +7,11 @@ import com.ppip.dallyeo.domain.region.LDongCode;
 import com.ppip.dallyeo.domain.region.Region;
 import com.ppip.dallyeo.domain.region.RegionCodeMapper;
 import com.ppip.dallyeo.external.tourapi.TourApiClient;
+import com.ppip.dallyeo.external.tourapi.dto.TourItem;
 import com.ppip.dallyeo.place.dto.PlaceSummary;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -19,47 +21,79 @@ import java.util.Map;
  *
  * <p>배지는 목록 응답에도 상세와 동일 형태로 포함한다. 항목마다 상세를 다시 부르지 않도록
  * 카테고리 필터를 <b>먼저</b> 적용하고, 남은 항목만 DB 조회 1회로 일괄 매칭한다.
+ *
+ * <p>영업시간(businessHours/openHours)도 목록에 싣는다(검색 결과 카드 둘째 줄). 다만 이쪽은
+ * TourAPI 목록 응답에 없어 항목마다 detailIntro2가 필요하므로, 카테고리 필터 뒤에
+ * {@link BusinessHoursEnricher}가 동시 호출 수·시간 예산 상한을 걸고 병렬로 채운다.
  */
 @Service
 public class PlaceService {
 
     private static final int DEFAULT_PAGE = 1;
-    private static final int DEFAULT_ROWS = 30;
+
+    /**
+     * TourAPI 1페이지 조회 건수.
+     *
+     * <p>지역 단위 조회는 "그 지역 전체"를 보여줘야 하는데(V3 지도), 이전 값 30은 근거 없는 상수라
+     * 군산 음식점·카페 129건 중 30건만 노출되고 있었다. 200이면 한 번 호출로 전량이 들어와
+     * 페이지 순회가 필요 없다. 응답은 Redis에 30분 캐시되므로 TourAPI 호출량은 늘지 않는다.
+     */
+    private static final int DEFAULT_ROWS = 200;
 
     private final TourApiClient tourApiClient;
     private final PlaceMapper placeMapper;
     private final RegionCodeMapper regionCodeMapper;
     private final BadgeService badgeService;
+    private final BusinessHoursEnricher businessHoursEnricher;
 
     public PlaceService(TourApiClient tourApiClient, PlaceMapper placeMapper,
-                        RegionCodeMapper regionCodeMapper, BadgeService badgeService) {
+                        RegionCodeMapper regionCodeMapper, BadgeService badgeService,
+                        BusinessHoursEnricher businessHoursEnricher) {
         this.tourApiClient = tourApiClient;
         this.placeMapper = placeMapper;
         this.regionCodeMapper = regionCodeMapper;
         this.badgeService = badgeService;
+        this.businessHoursEnricher = businessHoursEnricher;
     }
 
     /** 키워드 검색 (US-PLACE-1). region/category 선택. */
     public List<PlaceSummary> search(String keyword, Region region, CategoryType category) {
         LDongCode ldong = region == null ? null : regionCodeMapper.toLDongCode(region);
-        List<PlaceSummary> mapped = placeMapper.toSummaries(
-                tourApiClient.searchKeyword(keyword, ldong, coarseTypeId(category), DEFAULT_PAGE, DEFAULT_ROWS));
-        return attachBadges(filterByCategory(mapped, category));
+        return toResponse(tourApiClient.searchKeyword(
+                keyword, ldong, coarseTypeId(category), DEFAULT_PAGE, DEFAULT_ROWS), category);
     }
 
     /** 지역 장소 목록 (US-PLACE-2). region 필수. */
     public List<PlaceSummary> listByRegion(Region region, CategoryType category) {
         LDongCode ldong = regionCodeMapper.toLDongCode(region);
-        List<PlaceSummary> mapped = placeMapper.toSummaries(
-                tourApiClient.areaBasedList(ldong, coarseTypeId(category), DEFAULT_PAGE, DEFAULT_ROWS));
-        return attachBadges(filterByCategory(mapped, category));
+        return toResponse(tourApiClient.areaBasedList(
+                ldong, coarseTypeId(category), DEFAULT_PAGE, DEFAULT_ROWS), category);
     }
 
     /** 반경 주변 (US-PLACE-3). mapX=경도(lng), mapY=위도(lat). */
     public List<PlaceSummary> nearby(double lat, double lng, int radius, CategoryType category) {
-        List<PlaceSummary> mapped = placeMapper.toSummaries(
-                tourApiClient.locationBasedList(lng, lat, radius, coarseTypeId(category), DEFAULT_PAGE, DEFAULT_ROWS));
-        return attachBadges(filterByCategory(mapped, category));
+        return toResponse(tourApiClient.locationBasedList(
+                lng, lat, radius, coarseTypeId(category), DEFAULT_PAGE, DEFAULT_ROWS), category);
+    }
+
+    /**
+     * TourAPI 항목 → 응답 목록. 순서가 중요하다: 카테고리 필터를 먼저 걸어 부착 대상 자체를 줄이고,
+     * 그 다음 배지(DB 1회)와 영업시간(detailIntro2 병렬)을 채운다.
+     */
+    private List<PlaceSummary> toResponse(List<TourItem> items, CategoryType category) {
+        List<PlaceSummary> filtered = filterByCategory(placeMapper.toSummaries(items), category);
+        return businessHoursEnricher.enrich(attachBadges(filtered), contentTypeById(items));
+    }
+
+    /** detailIntro2에 필요한 contentId → contentTypeId. 목록 응답에서만 얻을 수 있다. */
+    private Map<String, Integer> contentTypeById(List<TourItem> items) {
+        Map<String, Integer> byId = new HashMap<>();
+        for (TourItem item : items) {
+            if (item.contentId() != null) {
+                byId.putIfAbsent(item.contentId(), item.contentTypeId());
+            }
+        }
+        return byId;
     }
 
     /** 목록 전체에 배지 부착 — DB 조회 1회(N+1 방지). 미매칭 항목은 빈 배열 유지. */

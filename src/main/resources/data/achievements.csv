@@ -1,0 +1,22 @@
+﻿code,category,sort_order,name,description,unlock_condition,icon_on,icon_off
+GUNSAN_SEONYUDO,GUNSAN,10,선유도 짱,군산의 선유도 해변 코스를 완주했다.,군산 선유도 해변 코스 완주,gunsan_seonyudo_on.webp,gunsan_seonyudo_off.webp
+GUNSAN_CONQUEROR,GUNSAN,20,군산 런트립 정복자,군산의 모든 추천코스를 완주했다.,군산 추천 코스 전체 완주,gunsan_conqueror_on.webp,gunsan_conqueror_off.webp
+JJAMPPONG,GUNSAN,30,짬뽕을 먹을 자격이 있는 자,군산의 짬뽕거리 코스를 완주했다.,군산 짬뽕거리 코스 완주,jjamppong_on.webp,jjamppong_off.webp
+GUNSAN_BEGINNER,GUNSAN,40,군산 초보 러너,군산의 러닝코스를 즐겨봤다.,군산 지역 런트립 1회 완주,gunsan_beginner_on.webp,gunsan_beginner_off.webp
+NATURE_LOVER,GUNSAN,50,자연을 사랑해!,군산의 편백나무 숲 코스를 완주했다.,군산 편백나무 숲 코스 완주,nature_lover_on.webp,nature_lover_off.webp
+BETWEEN_WAVES,GUNSAN,60,부숴지는 파도들 사이에서,군산의 새만금 방파제 코스를 완주했다.,군산 새만금 방파제 코스 완주,between_waves_on.webp,between_waves_off.webp
+JEONJU_CHERRY_BLOSSOM,JEONJU,70,천변벚꽃,삼천변 벚꽃길 방문,전주 삼천변 벚꽃길 코스 완주,jeonju_cherry_blossom_on.webp,jeonju_cherry_blossom_off.webp
+JEONJU_BEGINNER,JEONJU,80,전주 초보 러너,전주의 러닝코스를 즐겨봤다.,전주 지역 런트립 1회 완주,jeonju_beginner_on.webp,jeonju_beginner_off.webp
+JEONJU_DEOKJIN_LAKE,JEONJU,90,덕진 호수,덕진호수의 연꽃들 관람,전주 덕진호수 코스 완주,jeonju_deokjin_lake_on.webp,jeonju_deokjin_lake_off.webp
+JEONJU_CONQUEROR,JEONJU,100,전주 런트립 정복자,전주의 모든 추천코스를 완주했다.,전주 추천 코스 전체 완주,jeonju_conqueror_on.webp,jeonju_conqueror_off.webp
+JEONJU_PILGRIM,JEONJU,110,전주 성지순례자,전주의 천주교 성지 코스를 완주했다.,전주 천주교 성지 코스 완주,jeonju_pilgrim_on.webp,jeonju_pilgrim_off.webp
+JEONJU_ECO_MUSEUM,JEONJU,120,전주 자연생태관,전주 자연생태관 방문,전주 자연생태관 코스 완주,jeonju_eco_museum_on.webp,jeonju_eco_museum_off.webp
+LONG_RUN_3H,COMMON,130,장기간 러닝 성공,3시간 넘게 런트립,단일 런트립 러닝 시간 ≥ 3시간,long_run_3h_on.webp,long_run_3h_off.webp
+FINISH_10,COMMON,140,완주 10회 달성,완주 10회,누적 완주 횟수 ≥ 10회,finish_10_on.webp,finish_10_off.webp
+ICE_CREAM_RUNNER,COMMON,150,아이스크림 러너,12월 중 런트립 완주,12월(로컬 시각 기준) 런트립 1회 완주,ice_cream_runner_on.webp,ice_cream_runner_off.webp
+DISTANCE_100KM,COMMON,160,100km 이상,누적거리 달성,누적 러닝 거리 ≥ 100km,distance_100km_on.webp,distance_100km_off.webp
+EARLY_BIRD,COMMON,170,얼리버드,아침 8시 이전에 런트립 시작,런트립 시작 시각 < 08:00 (로컬),early_bird_on.webp,early_bird_off.webp
+WAYPOINT_3,COMMON,180,경유지 3개 지나감,경유지 3개 거치고 완주,경유지 3개 이상 코스 완주,waypoint_3_on.webp,waypoint_3_off.webp
+REST_TIME,COMMON,190,휴식타임,"카페, 음식점을 도착지로 설정하고 러닝 완주",도착지 카테고리가 카페/음식점인 코스 완주,rest_time_on.webp,rest_time_off.webp
+SLOW_WALKER,COMMON,200,뚜벅이,완주시 페이스가 키로당 몇분,완주 평균 페이스 ≥ 10분/km (기준값 기획 확정 필요),slow_walker_on.webp,slow_walker_off.webp
+PIONEER,COMMON,210,개척자,새로운 코스를 만들어 런트립,직접 만든 코스로 런트립 완주,pioneer_on.webp,pioneer_off.webp
