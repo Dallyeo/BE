@@ -60,7 +60,7 @@ public enum AchievementType {
     // 도착지 장소 정보를 앱이 보내주지 않아 판정 불가 — 전달 형식이 정해지면 Kind 교체.
     REST_TIME("휴식타임", "카페, 음식점을 도착지로 설정하고 러닝 완주",
             Category.COMMON, 190, Kind.PENDING),
-    // 기준 페이스(키로당 몇 분)가 시안에 없어 보류 — 정해지면 Kind.MIN_PACE_SECONDS + 임계값.
+    // 기준 페이스(키로당 몇 분)가 시안에 없어 보류 — 기준이 정해지면 평균 페이스 비교 Kind를 추가한다.
     SLOW_WALKER("뚜벅이", "완주시 페이스가 키로당 몇분",
             Category.COMMON, 200, Kind.PENDING),
     PIONEER("개척자", "새로운 코스를 만들어 런트립",

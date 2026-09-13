@@ -11,9 +11,12 @@ import com.ppip.dallyeo.external.tourapi.dto.TourItem;
 import com.ppip.dallyeo.place.dto.PlaceSummary;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * 장소 검색/목록/반경 오케스트레이션 (US-PLACE-1/2/3). TourApiClient → PlaceMapper → 배지 부착.
@@ -58,16 +61,44 @@ public class PlaceService {
 
     /** 키워드 검색 (US-PLACE-1). region/category 선택. */
     public List<PlaceSummary> search(String keyword, Region region, CategoryType category) {
-        LDongCode ldong = region == null ? null : regionCodeMapper.toLDongCode(region);
-        return toResponse(tourApiClient.searchKeyword(
-                keyword, ldong, coarseTypeId(category), DEFAULT_PAGE, DEFAULT_ROWS), category);
+        Integer typeId = coarseTypeId(category);
+        List<TourItem> items = region == null
+                ? tourApiClient.searchKeyword(keyword, null, typeId, DEFAULT_PAGE, DEFAULT_ROWS)
+                : mergeByRegion(region, ldong ->
+                        tourApiClient.searchKeyword(keyword, ldong, typeId, DEFAULT_PAGE, DEFAULT_ROWS));
+        return toResponse(items, category);
     }
 
     /** 지역 장소 목록 (US-PLACE-2). region 필수. */
     public List<PlaceSummary> listByRegion(Region region, CategoryType category) {
-        LDongCode ldong = regionCodeMapper.toLDongCode(region);
-        return toResponse(tourApiClient.areaBasedList(
-                ldong, coarseTypeId(category), DEFAULT_PAGE, DEFAULT_ROWS), category);
+        Integer typeId = coarseTypeId(category);
+        return toResponse(mergeByRegion(region, ldong ->
+                tourApiClient.areaBasedList(ldong, typeId, DEFAULT_PAGE, DEFAULT_ROWS)), category);
+    }
+
+    /**
+     * 지역의 법정동코드마다 조회해 하나로 합친다.
+     *
+     * <p>전주는 시(110)에 TourAPI 데이터가 0건이고 실제 데이터가 완산구(111)·덕진구(113)에
+     * 나뉘어 있어, 코드 하나만 부르면 빈 배열이 나온다. 자치구가 하나인 군산은 1회 호출 그대로다.
+     *
+     * <p>합친 뒤 contentId로 중복을 제거하고 이름순으로 재정렬한다 — 코드별로 이어붙이기만 하면
+     * "완산구 전체 → 덕진구 전체" 순이 되어 한 지역인데 목록이 두 덩어리로 보인다.
+     */
+    private List<TourItem> mergeByRegion(Region region, Function<LDongCode, List<TourItem>> fetch) {
+        List<LDongCode> codes = regionCodeMapper.toLDongCodes(region);
+        if (codes.size() == 1) {
+            return fetch.apply(codes.get(0));
+        }
+        Map<String, TourItem> byId = new LinkedHashMap<>();
+        for (LDongCode ldong : codes) {
+            for (TourItem item : fetch.apply(ldong)) {
+                byId.putIfAbsent(item.contentId(), item);
+            }
+        }
+        return byId.values().stream()
+                .sorted(Comparator.comparing(TourItem::title, Comparator.nullsLast(String::compareTo)))
+                .toList();
     }
 
     /** 반경 주변 (US-PLACE-3). mapX=경도(lng), mapY=위도(lat). */

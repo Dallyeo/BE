@@ -12,22 +12,23 @@ class RegionCodeMapperTest {
     private final RegionCodeMapper mapper = new RegionCodeMapper();
 
     @Test
-    void mapsGunsan() {
-        LDongCode code = mapper.toLDongCode(Region.GUNSAN);
-        assertThat(code.lDongRegnCd()).isEqualTo("52");
-        assertThat(code.lDongSignguCd()).isEqualTo("130");
+    void gunsanIsOneDistrict() {
+        assertThat(mapper.toLDongCodes(Region.GUNSAN))
+                .containsExactly(new LDongCode("52", "130"));
     }
 
     @Test
-    void mapsJeonju() {
-        LDongCode code = mapper.toLDongCode(Region.JEONJU);
-        assertThat(code.lDongRegnCd()).isEqualTo("52");
-        assertThat(code.lDongSignguCd()).isEqualTo("110");
+    void jeonjuSplitsIntoItsTwoDistricts() {
+        // 전주시(110)는 TourAPI 등록 데이터가 0건이라 쓰면 안 된다 — 실제 데이터는 완산구/덕진구에 있다.
+        assertThat(mapper.toLDongCodes(Region.JEONJU))
+                .containsExactly(new LDongCode("52", "111"), new LDongCode("52", "113"));
+        assertThat(mapper.toLDongCodes(Region.JEONJU))
+                .extracting(LDongCode::lDongSignguCd).doesNotContain("110");
     }
 
     @Test
     void nullRegionIsBadRequest() {
-        assertThatThrownBy(() -> mapper.toLDongCode(null))
+        assertThatThrownBy(() -> mapper.toLDongCodes(null))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
                         .isEqualTo(ErrorCode.BAD_REQUEST));

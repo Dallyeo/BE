@@ -2,7 +2,7 @@
 
 > 현재까지 구현된 API입니다. 🌐 = 공개(토큰 불필요), 🔒 = 인증 필요.
 > **U1-a/U2/U3(공개 조회) + U4(인증·사용자) + U5(러닝 기록) + U6(업적)** 완료.
-> **최근 변경**: 코스 경유지에서 자동 생성 이름(`경유지1` 등) 제거 · 러닝 기록 이미지 업로드(`POST /runs/{id}/image`) 추가 · 코스 `imageUrl` 추가 · `/places` **목록 3종에 `badges` 추가** · `/places` **목록 3종에 `businessHours`/`openHours` 추가**(원문 정리 + 대표 영업시간 분리) · `POST /runs` 응답에 **`newAchievements` 추가**(결과창 도장, 최초 달성만) · 업적 **8종 → 21종 확장** + 응답에 `category`/`sortOrder`/`iconOnUrl`/`iconOffUrl` 추가. 사용자 코스 생성은 백엔드에 저장하지 않음(프론트/클라이언트 담당) — 사용자가 만든 경로는 러닝 기록의 `polyline`으로 저장됩니다.
+> **최근 변경**: 코스 경유지에서 자동 생성 이름(`경유지1` 등) 제거 · 러닝 기록 이미지 업로드(`POST /runs/{id}/image`) 추가 · 코스 `imageUrl` 추가 · `/places` **목록 3종에 `badges` 추가** · `/places` **목록 3종에 `businessHours`/`openHours` 추가**(원문 정리 + 대표 영업시간 분리) · **`POST /runs` 구조 변경**(multipart, 이미지 필수, polyline → 출발·도착 좌표) · **전주 장소 조회 0건 결함 수정**(자치구 병합) · `POST /runs` 응답에 **`newAchievements` 추가**(결과창 도장, 최초 달성만) · 업적 **8종 → 21종 확장** + 응답에 `category`/`sortOrder`/`iconOnUrl`/`iconOffUrl` 추가. 사용자 코스 생성은 백엔드에 저장하지 않음(프론트/클라이언트 담당) — 사용자가 만든 경로는 러닝 기록의 출발·도착 좌표와 코스 이미지로 남습니다.
 
 - **Base URL**: `https://dallyeo.cloud` (개발 로컬: `http://localhost:8080`)
 - **Content-Type**: `application/json; charset=UTF-8`
@@ -185,6 +185,8 @@ GET /places?region={GUNSAN|JEONJU}&category={카테고리}
 ```
 - `region` **필수**. `category` 선택.
 - 응답: PlaceSummary 배열.
+- 전주는 TourAPI에 시(市) 단위 데이터가 없어 서버가 **완산구·덕진구를 각각 조회해 합쳐서** 내려줍니다.
+  중복은 제거되고 이름순으로 정렬됩니다 — 클라이언트가 신경 쓸 건 없습니다.
 
 ### 4.3 주변 장소 (반경)
 ```
@@ -378,21 +380,37 @@ DELETE /users/me
 ### 7.1 러닝 기록 저장
 ```
 POST /runs
+Content-Type: multipart/form-data
 ```
-**Request Body**
+파트 **2개**를 보냅니다 — `run`(JSON) + `image`(파일). **이미지는 필수**입니다.
+
+**파트 `run`** (application/json)
 ```json
 {
-  "courseId": "gunsan-modern-history-run | null",
-  "polyline": [ { "lat": 35.95, "lng": 126.68 } ],
+  "courseId": "gunsan-jjamppong-run",
+  "start": { "lat": 35.95, "lng": 126.68 },
+  "end":   { "lat": 35.96, "lng": 126.69 },
   "distanceMeters": 10480,
   "durationSeconds": 3600,
-  "averagePaceSeconds": 343,
-  "startedAt": "2026-07-09T07:00:00Z",
-  "finishedAt": "2026-07-09T08:00:00Z"
+  "startedAt":  "2026-09-13T07:00:00Z",
+  "finishedAt": "2026-09-13T08:00:00Z"
 }
 ```
-- `courseId`: 시드(공식) 코스를 달렸으면 참조, 자유 러닝/직접 만든 경로면 `null`. 존재 검증은 하지 않습니다.
-- `polyline` 비어있음 / `distanceMeters`·`durationSeconds` ≤ 0 / 필수 필드 누락 / `finishedAt < startedAt` → **400**
+
+| 필드 | 필수 | 설명 |
+|---|:---:|---|
+| `start` / `end` | ✅ | 출발·도착 좌표. **전체 경로(polyline)는 보내지 않습니다** — 코스 이미지가 대신합니다 |
+| `distanceMeters` | ✅ | 0 이하 → 400 |
+| `durationSeconds` | ✅ | 0 이하 → 400 |
+| `courseId` | ❌ | 공식 코스면 id, 직접 만든 경로면 생략/`null`. **업적 판정의 기준**이라 공식 코스를 달렸으면 꼭 보내세요 |
+| `startedAt` | ❌ | 없으면 "얼리버드"(8시 이전 시작) 업적만 판정하지 않습니다 |
+| `finishedAt` | ❌ | **기록의 날짜**. 없으면 **서버 저장 시각**을 씁니다 |
+
+- `averagePaceSeconds`는 **보내지 않습니다** — 거리·시간으로 서버가 계산해 응답에 넣어줍니다.
+- 둘 다 보낼 때 `finishedAt < startedAt` → 400.
+
+**파트 `image`** — JPEG/PNG/WebP/HEIC/HEIF, 최대 10MB. 러닝 경로를 그린 코스 이미지입니다.
+**누락 시 400.**
 
 **Response 201**
 ```json
@@ -400,32 +418,28 @@ POST /runs
   "success": true,
   "data": {
     "id": 1,
-    "courseId": "gunsan-modern-history-run | null",
-    "courseName": "근대 역사 박물관 런 | null",
-    "polyline": [ { "lat": 35.95, "lng": 126.68 } ],
+    "courseId": "gunsan-jjamppong-run",
+    "courseName": "짬뽕런",
+    "start": { "lat": 35.95, "lng": 126.68 },
+    "end":   { "lat": 35.96, "lng": 126.69 },
     "distanceMeters": 10480,
     "durationSeconds": 3600,
-    "averagePaceSeconds": 343,
-    "imageUrl": null,
-    "startedAt": "2026-07-09T07:00:00Z",
-    "finishedAt": "2026-07-09T08:00:00Z",
-    "newAchievements": [
-      { "code": "JJAMPPONG", "name": "짬뽕을 먹을 자격이 있는 자",
-        "description": "군산 짬뽕거리 코스를 완주한 사람",
-        "unlocked": true, "unlockedAt": "2026-07-09T08:00:01Z" }
-    ]
+    "averagePaceSeconds": 344,
+    "imageUrl": "/uploads/runs/fb63bae3-....jpg",
+    "startedAt":  "2026-09-13T07:00:00Z",
+    "finishedAt": "2026-09-13T08:00:00Z",
+    "newAchievements": [ ... ]
   }
 }
 ```
-> `completionRate`(완주율)는 아직 계산하지 않습니다(응답에서 생략). 계산 기준 확정 후 추가 예정.
-> `imageUrl`은 저장 직후엔 항상 비어 있습니다 — 이미지는 **7.2에서 별도로 업로드**합니다.
+> 서버가 채워주는 값: **`id`**(이후 이미지 교체에 사용) · `courseName` · `averagePaceSeconds` · `imageUrl` · `newAchievements`.
+> `completionRate`(완주율)는 아직 계산하지 않습니다(응답에서 생략).
 
 #### 🏅 `newAchievements` — 러닝 결과창 도장
 - 이 러닝으로 **처음 달성한** 업적만 담깁니다. **결과창에 띄울 도장이 바로 이 배열**입니다.
-- **재달성은 절대 다시 오지 않습니다.** 같은 조건을 몇 번 더 채워도 두 번째부터는 항상 `[]` 입니다
-  (서버가 미달성 업적만 판정하고, DB에도 `(userId, achievement)` 유니크 제약이 있습니다).
-- 새로 달성한 게 없으면 **빈 배열** `[]` 입니다(필드는 항상 존재).
-- **저장(`POST /runs`) 응답에만 있습니다.** 조회(`GET /runs/{id}`, `GET /runs`)에는 이 필드 자체가 없어서,
+- **재달성은 절대 다시 오지 않습니다.** 같은 조건을 몇 번 더 채워도 두 번째부터는 항상 `[]` 입니다.
+- **한 번에 여러 개가 올 수 있습니다**(실측 최대 7개). 배열 길이를 1로 가정하지 마세요.
+- **저장(`POST /runs`) 응답에만 있습니다.** 조회(`GET /runs/{id}`, `GET /runs`)에는 이 필드 자체가 없어,
   지난 기록을 다시 열어도 도장이 재생되지 않습니다.
 - 항목 형태는 업적 목록(8.1)과 동일합니다 — 같은 `code`로 도장 이미지를 매칭하면 됩니다.
 
@@ -456,7 +470,8 @@ Content-Type: multipart/form-data
     "id": 1,
     "courseId": "gunsan-modern-history-run | null",
     "courseName": "근대 역사 박물관 런 | null",
-    "polyline": [ { "lat": 35.95, "lng": 126.68 } ],
+    "start": { "lat": 35.95, "lng": 126.68 },
+    "end":   { "lat": 35.96, "lng": 126.69 },
     "distanceMeters": 10480,
     "durationSeconds": 3600,
     "averagePaceSeconds": 343,
@@ -476,7 +491,7 @@ Content-Type: multipart/form-data
 GET /runs?from={ISO date}&to={ISO date}
 ```
 - 본인 기록만 반환. `from`/`to`(예: `2026-07-01`)는 선택 — `finishedAt` 기준으로 필터, **최신순** 정렬.
-- 잘못된 날짜 형식 → **400**. 목록 응답은 경량(**polyline 미포함**).
+- 잘못된 날짜 형식 → **400**. 목록 응답은 경량(좌표·코스 미포함).
 
 **Response 200**
 ```json
@@ -500,7 +515,7 @@ GET /runs?from={ISO date}&to={ISO date}
 GET /runs/{id}
 ```
 - 본인 기록만. 타인의 기록이거나 존재하지 않으면 **404**.
-- **Response 200** — 7.1 응답과 동일 구조(`polyline`·`imageUrl` 포함).
+- **Response 200** — 7.1 응답과 동일 구조(`start`/`end`/`imageUrl` 포함, `newAchievements` 없음).
 
 ---
 
@@ -631,7 +646,7 @@ POST /achievements/{code}/unlock
 | `/places` 목록 3종 `businessHours` | ✅ **완료**(상세와 동일 형태, 개행 구분) |
 | 대표 영업시간 `openHours` 분리 | ✅ **완료**(목록·상세 모두) |
 | 업적 목록·달성 `GET /achievements`, `POST /achievements/{code}/unlock` (🔒) | ✅ **U6 완료** |
-| 사용자 코스 생성 `POST /courses` (🔒) | 백엔드 저장 안 함(프론트 담당) — 러닝 `polyline`으로 보관 |
+| 사용자 코스 생성 `POST /courses` (🔒) | 백엔드 저장 안 함(프론트 담당) — 러닝 좌표·이미지로 보관 |
 | 러닝 기록 수정·삭제 / 완주율·통계 / 업적 진행률 | 후속(백로그) |
 | 장소 상세 부가정보/이미지 갤러리 | 후속 |
 | 러닝 이미지 삭제 API / 배지 매칭 완화(이름만·유사도) | 후속(백로그) |

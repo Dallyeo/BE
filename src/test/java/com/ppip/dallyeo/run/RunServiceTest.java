@@ -9,6 +9,8 @@ import com.ppip.dallyeo.course.dto.PolylinePoint;
 import com.ppip.dallyeo.run.dto.RunCreateRequest;
 import com.ppip.dallyeo.run.dto.RunDetailResponse;
 import com.ppip.dallyeo.run.dto.RunSummaryResponse;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -38,10 +40,17 @@ class RunServiceTest {
     private final Instant started = Instant.parse("2026-07-09T07:00:00Z");
     private final Instant finished = Instant.parse("2026-07-09T08:00:00Z");
 
+    private final PolylinePoint START = new PolylinePoint(35.95, 126.68);
+    private final PolylinePoint END = new PolylinePoint(35.96, 126.69);
+    private final MultipartFile image = new MockMultipartFile(
+            "image", "route.jpg", "image/jpeg", "fake".getBytes());
+
     private RunCreateRequest request(String courseId, Instant start, Instant end) {
-        return new RunCreateRequest(courseId,
-                List.of(new PolylinePoint(35.95, 126.68)),
-                10480, 3600, 343, start, end);
+        return new RunCreateRequest(courseId, START, END, 10480, 3600, start, end);
+    }
+
+    private RunDetailResponse save(Long userId, RunCreateRequest request) {
+        return service.save(userId, request, image);
     }
 
     @Test
@@ -52,7 +61,7 @@ class RunServiceTest {
             return r;
         });
 
-        RunDetailResponse res = service.save(7L, request(null, started, finished));
+        RunDetailResponse res = save(7L, request(null, started, finished));
 
         assertThat(res.id()).isEqualTo(1L);
         assertThat(res.completionRate()).isNull();
@@ -65,7 +74,7 @@ class RunServiceTest {
         when(courseRepository.findById("ghost")).thenReturn(Optional.empty());
         when(runRepository.save(any(Run.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        RunDetailResponse res = service.save(7L, request("ghost", started, finished));
+        RunDetailResponse res = save(7L, request("ghost", started, finished));
 
         assertThat(res.courseId()).isEqualTo("ghost");
         assertThat(res.courseName()).isNull();
@@ -73,7 +82,7 @@ class RunServiceTest {
 
     @Test
     void save_finishedBeforeStarted_throwsBadRequest() {
-        assertThatThrownBy(() -> service.save(7L, request(null, finished, started)))
+        assertThatThrownBy(() -> save(7L, request(null, finished, started)))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.BAD_REQUEST);
 
@@ -105,15 +114,17 @@ class RunServiceTest {
     @Test
     void getDetail_ownRun_returnsDetail() {
         Run run = Run.builder().id(1L).userId(7L)
-                .polyline(List.of(new PolylinePoint(35.95, 126.68)))
+                .startLat(35.95).startLng(126.68).endLat(35.96).endLng(126.69)
                 .distanceMeters(10480).durationSeconds(3600).averagePaceSeconds(343)
+                .imageUrl("/uploads/runs/x.jpg")
                 .startedAt(started).finishedAt(finished).build();
         when(runRepository.findById(1L)).thenReturn(Optional.of(run));
 
         RunDetailResponse res = service.getDetail(7L, 1L);
 
         assertThat(res.id()).isEqualTo(1L);
-        assertThat(res.polyline()).hasSize(1);
+        assertThat(res.start()).isEqualTo(new PolylinePoint(35.95, 126.68));
+        assertThat(res.end()).isEqualTo(new PolylinePoint(35.96, 126.69));
     }
 
     @Test
@@ -137,12 +148,11 @@ class RunServiceTest {
 
     // ===== 기록 이미지 업로드 =====
 
-    private final org.springframework.mock.web.MockMultipartFile image =
-            new org.springframework.mock.web.MockMultipartFile("image", "p.jpg", "image/jpeg", "x".getBytes());
-
     private Run ownedRun() {
         return Run.builder().id(1L).userId(7L)
+                .startLat(35.95).startLng(126.68).endLat(35.96).endLng(126.69)
                 .distanceMeters(10480).durationSeconds(3600).averagePaceSeconds(343)
+                .imageUrl("/uploads/runs/old.jpg")
                 .startedAt(started).finishedAt(finished).build();
     }
 
@@ -222,7 +232,7 @@ class RunServiceTest {
                         "/images/achievements/jjamppong_on.webp", "/images/achievements/jjamppong_off.webp",
                         true, started)));
 
-        RunDetailResponse res = service.save(7L, request("gunsan-jjamppong-run", started, finished));
+        RunDetailResponse res = save(7L, request("gunsan-jjamppong-run", started, finished));
 
         assertThat(res.newAchievements()).extracting(AchievementResponse::code).containsExactly("JJAMPPONG");
     }
@@ -233,7 +243,7 @@ class RunServiceTest {
         stubSavedRun();
         when(achievementService.evaluateAndUnlock(7L)).thenReturn(List.of());
 
-        RunDetailResponse res = service.save(7L, request("gunsan-jjamppong-run", started, finished));
+        RunDetailResponse res = save(7L, request("gunsan-jjamppong-run", started, finished));
 
         assertThat(res.newAchievements()).isNotNull().isEmpty();
     }
@@ -242,11 +252,62 @@ class RunServiceTest {
     void getDetail_neverCarriesAchievements() {
         // 지난 기록을 다시 열어도 도장이 재생되면 안 된다 → 조회 응답엔 아예 없음(null → 직렬화 제외).
         Run run = Run.builder().id(1L).userId(7L).courseId("gunsan-jjamppong-run")
-                .polyline(List.of(new PolylinePoint(35.95, 126.68)))
+                .startLat(35.95).startLng(126.68).endLat(35.96).endLng(126.69)
                 .distanceMeters(10480).durationSeconds(3600).averagePaceSeconds(343)
+                .imageUrl("/uploads/runs/x.jpg")
                 .startedAt(started).finishedAt(finished).build();
         when(runRepository.findById(1L)).thenReturn(Optional.of(run));
 
         assertThat(service.getDetail(7L, 1L).newAchievements()).isNull();
+    }
+    // ===== 새 저장 구조 (좌표 2점 · 이미지 필수 · 날짜 기본값 · 페이스 계산) =====
+
+    @Test
+    void save_storesStartAndEndCoordinates() {
+        when(runRepository.save(any(Run.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(imageStorage.store(any(), any())).thenReturn("/uploads/runs/a.jpg");
+
+        RunDetailResponse res = save(7L, request(null, started, finished));
+
+        assertThat(res.start()).isEqualTo(START);
+        assertThat(res.end()).isEqualTo(END);
+        assertThat(res.imageUrl()).isEqualTo("/uploads/runs/a.jpg");
+    }
+
+    @Test
+    void save_withoutFinishedAt_usesServerTimeAsRunDate() {
+        // 날짜는 클라이언트가 주면 그 값, 없으면 저장 시각.
+        when(runRepository.save(any(Run.class))).thenAnswer(inv -> inv.getArgument(0));
+        Instant before = Instant.now();
+
+        RunDetailResponse res = save(7L, new RunCreateRequest(null, START, END, 10480, 3600, null, null));
+
+        assertThat(res.finishedAt()).isBetween(before, Instant.now());
+        assertThat(res.startedAt()).isNull();   // 선택 필드 — 없어도 저장된다
+    }
+
+    @Test
+    void save_withFinishedAt_keepsClientDate() {
+        when(runRepository.save(any(Run.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThat(save(7L, request(null, started, finished)).finishedAt()).isEqualTo(finished);
+    }
+
+    @Test
+    void save_computesPaceFromDistanceAndDuration() {
+        // 페이스는 클라이언트가 주지 않는다 — 거리·시간에서 서버가 계산한다.
+        when(runRepository.save(any(Run.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // 10.48km 를 3600초 → 3600*1000/10480 = 343.5 → 반올림 344초/km
+        assertThat(save(7L, request(null, started, finished)).averagePaceSeconds()).isEqualTo(344);
+    }
+
+    @Test
+    void save_imageIsStoredOncePerRun() {
+        when(runRepository.save(any(Run.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        save(7L, request(null, started, finished));
+
+        verify(imageStorage).store(eq(image), eq("runs"));
     }
 }

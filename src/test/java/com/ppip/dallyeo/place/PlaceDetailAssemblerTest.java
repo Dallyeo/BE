@@ -44,6 +44,24 @@ class PlaceDetailAssemblerTest {
     }
 
     @Test
+    void assemble_survivesWhenHoursLookupFails() {
+        // detailIntro2 오퍼레이션만 한도를 소진해도 개요·좌표·배지는 멀쩡하다 —
+        // 영업시간 하나 때문에 상세 화면 전체가 502로 죽으면 안 된다.
+        TourCommon common = new TourCommon("100", "군산맛집", 39, "개요", null, "http://img",
+                null, "전북 군산시", 35.9, 126.7);
+        when(client.detailCommon("100")).thenReturn(common);
+        when(client.detailIntro("100", 39)).thenReturn(null);   // 조회 실패 → fallback이 null 반환
+        when(badgeService.badgesFor("군산맛집", "전북 군산시")).thenReturn(List.of("GOOD_PRICE"));
+
+        PlaceDetail d = assembler.assemble("100");
+
+        assertThat(d.name()).isEqualTo("군산맛집");
+        assertThat(d.businessHours()).isNull();
+        assertThat(d.openHours()).isNull();
+        assertThat(d.badges()).containsExactly("GOOD_PRICE");
+    }
+
+    @Test
     void assemble_notFoundWhenCommonNull() {
         when(client.detailCommon("nope")).thenReturn(null);
 

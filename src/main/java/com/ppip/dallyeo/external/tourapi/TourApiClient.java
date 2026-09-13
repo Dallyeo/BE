@@ -141,17 +141,28 @@ public class TourApiClient {
     }
 
     // ===== 상세 소개 (detailIntro2) =====
-    @Cacheable(cacheNames = "tourApiDetailIntro", key = "'intro:' + #contentId + ':' + #contentTypeId")
+    // unless: 실패(null)는 캐시하지 않는다 — 다음 호출에서 다시 시도해야 한다.
+    @Cacheable(cacheNames = "tourApiDetailIntro", key = "'intro:' + #contentId + ':' + #contentTypeId",
+            unless = "#result == null")
     @Retry(name = "tourApiDetailIntro", fallbackMethod = "detailIntroFallback")
     @CircuitBreaker(name = "tourApiDetailIntro", fallbackMethod = "detailIntroFallback")
     public TourIntro detailIntro(String contentId, int contentTypeId) {
         return fetchIntro(contentId, contentTypeId);
     }
 
+    /**
+     * 영업시간 조회 실패는 <b>장소 상세 전체를 실패시키지 않는다</b> — null 반환.
+     *
+     * <p>개요(detailCommon2)·좌표·이미지·배지는 이미 확보한 상태인데 영업시간 하나 때문에
+     * 상세 화면이 502로 죽으면 안 된다. 실제로 detailIntro2 <b>오퍼레이션만</b> 일일 한도를 소진한
+     * 상황에서 다른 정보는 멀쩡한데도 {@code /places/{id}} 가 통째로 실패했다.
+     * (한도는 오퍼레이션별로 따로 집계된다.)
+     */
     @SuppressWarnings("unused")
     TourIntro detailIntroFallback(String contentId, int contentTypeId, Throwable t) {
-        log.warn("TourAPI detailIntro2 fallback (contentId={}, typeId={}): {}", contentId, contentTypeId, t.toString());
-        throw new ExternalApiException("TourAPI 장소 상세(소개) 조회에 실패했습니다.", t);
+        log.warn("TourAPI detailIntro2 실패 — businessHours 없이 응답 (contentId={}, typeId={}): {}",
+                contentId, contentTypeId, t.toString());
+        return null;
     }
 
     // ===== 상세 소개 — 목록 채우기 전용 (best-effort) =====

@@ -6,6 +6,7 @@ import com.ppip.dallyeo.common.exception.BusinessException;
 import com.ppip.dallyeo.common.exception.ErrorCode;
 import com.ppip.dallyeo.common.storage.ImageStorage;
 import com.ppip.dallyeo.course.CourseRepository;
+import com.ppip.dallyeo.course.dto.PolylinePoint;
 import com.ppip.dallyeo.run.dto.RunCreateRequest;
 import com.ppip.dallyeo.run.dto.RunDetailResponse;
 import com.ppip.dallyeo.run.dto.RunSummaryResponse;
@@ -23,7 +24,7 @@ import java.util.List;
 /**
  * 러닝 기록 저장/조회 (US-RUN-1/2/3). 전부 인증 소유자 전용.
  * - 저장: 검증(BR-U5-5) 후 userId 귀속. courseId 느슨(존재검증 없음 — BR-U5-6).
- * - 목록: 본인 격리 + 기간 필터(finishedAt 기준, 최신순) — polyline 제외 경량.
+ * - 목록: 본인 격리 + 기간 필터(finishedAt 기준, 최신순) — 좌표·코스 제외 경량.
  * - 상세: 소유권 검증(타인/미존재 → 404 은폐, BR-U5-2).
  * completionRate는 미계산(null, BR-U5-8). courseName은 시드 코스 best-effort lookup.
  */
@@ -49,17 +50,21 @@ public class RunService {
 
     /** 러닝 기록 저장 (US-RUN-1). 검증 위반 → 400. */
     @Transactional
-    public RunDetailResponse save(Long userId, RunCreateRequest request) {
+    public RunDetailResponse save(Long userId, RunCreateRequest request, MultipartFile image) {
         validate(request);
         Run run = Run.builder()
                 .userId(userId)
                 .courseId(request.courseId())
-                .polyline(request.polyline())
+                .startLat(request.start().lat())
+                .startLng(request.start().lng())
+                .endLat(request.end().lat())
+                .endLng(request.end().lng())
                 .distanceMeters(request.distanceMeters())
                 .durationSeconds(request.durationSeconds())
-                .averagePaceSeconds(request.averagePaceSeconds())
+                .averagePaceSeconds(paceSeconds(request.distanceMeters(), request.durationSeconds()))
+                .imageUrl(imageStorage.store(image, IMAGE_CATEGORY))
                 .startedAt(request.startedAt())
-                .finishedAt(request.finishedAt())
+                .finishedAt(runDate(request))
                 .build();
         Run saved = runRepository.save(run);
         // 러닝 저장 시 업적 자동 판정·달성(U6, Q1).
@@ -107,9 +112,20 @@ public class RunService {
     }
 
     private void validate(RunCreateRequest request) {
-        if (request.finishedAt().isBefore(request.startedAt())) {
+        if (request.startedAt() != null && request.finishedAt() != null
+                && request.finishedAt().isBefore(request.startedAt())) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "finishedAt은 startedAt보다 앞설 수 없습니다.");
         }
+    }
+
+    /** 기록의 날짜 — 클라이언트가 종료 시각을 주면 그 값, 없으면 저장 시각. */
+    private Instant runDate(RunCreateRequest request) {
+        return request.finishedAt() != null ? request.finishedAt() : Instant.now();
+    }
+
+    /** 평균 페이스(초/km). 거리가 1km 미만이어도 비례 계산한다. */
+    private int paceSeconds(int distanceMeters, int durationSeconds) {
+        return (int) Math.round(durationSeconds * 1000.0 / distanceMeters);
     }
 
     private RunDetailResponse toDetail(Run run) {
@@ -117,7 +133,8 @@ public class RunService {
                 run.getId(),
                 run.getCourseId(),
                 lookupCourseName(run.getCourseId()),
-                run.getPolyline(),
+                new PolylinePoint(run.getStartLat(), run.getStartLng()),
+                new PolylinePoint(run.getEndLat(), run.getEndLng()),
                 run.getDistanceMeters(),
                 run.getDurationSeconds(),
                 run.getAveragePaceSeconds(),

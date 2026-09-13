@@ -100,10 +100,15 @@ sudo mysql -u root -p dallyeo -e "SHOW COLUMNS FROM user_achievement LIKE 'achie
 
 **순서**: 마이그레이션 → 그다음 `main` push(자동 배포). 반대로 하면 그 사이에 들어온 요청이 실패합니다.
 
+> ⚠️ **`DROP TABLE` 형 마이그레이션은 배포와 붙여서** 실행하세요. 테이블이 없는 동안 구버전 인스턴스의
+> 해당 API 는 500 이 납니다. 또 구버전이 **재시작되면 옛 스키마로 테이블을 다시 만들어** 버리므로,
+> 드롭 후에는 반드시 새 코드가 먼저 기동해야 합니다.
+
 **적용 이력**
-| 날짜 | 파일 | 내용 | 이유 |
-|---|---|---|---|
-| 2026-09-13 | `migrate-user-achievement-varchar.sql` | `user_achievement.achievement` enum → `VARCHAR(40)` | 업적 8종→21종 확장. Hibernate 가 만든 네이티브 enum 컬럼이 옛 8종만 허용해 신규 업적 저장이 500 으로 실패 |
+| 날짜 | 파일 | 내용 | 이유 | 상태 |
+|---|---|---|---|---|
+| 2026-09-13 | `migrate-user-achievement-varchar.sql` | `user_achievement.achievement` enum → `VARCHAR(40)` | 업적 8종→21종 확장. Hibernate 가 만든 네이티브 enum 컬럼이 옛 8종만 허용해 신규 업적 저장이 500 으로 실패 | ✅ 적용됨 |
+| 2026-09-13 | `migrate-run-start-end-coords.sql` | `DROP TABLE run` (앱이 새 스키마로 재생성) | 러닝 저장 구조 변경 — polyline 제거·출발/도착 좌표 추가·image_url NOT NULL·started_at NULL 허용. 컬럼 삭제/NULL 변경이라 ddl-auto 로는 불가. **기존 기록 전부 삭제됨** | ⬜ 미적용 |
 
 ## 주의
 - `spring.jpa.hibernate.ddl-auto=update`: 블루·그린이 같은 스키마 공유 → 컬럼 삭제/변경형 배포는 위험. 추가형만 안전. 운영 안정화 시 Flyway 전환 권장.

@@ -11,7 +11,6 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -35,12 +34,19 @@ public class RunController {
         this.runService = runService;
     }
 
-    /** 러닝 기록 저장 (US-RUN-1). 검증 실패 → 400. */
-    @PostMapping
+    /**
+     * 러닝 기록 저장 (US-RUN-1). {@code multipart/form-data} 한 번으로 기록 + 코스 이미지를 받는다.
+     *
+     * <p>파트 두 개: {@code run}(JSON, {@link RunCreateRequest}) · {@code image}(이미지 파일).
+     * <b>이미지는 필수</b> — 전체 경로를 좌표로 저장하지 않고 이 이미지로 대신하기 때문이다.
+     * 검증 실패 → 400.
+     */
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<RunDetailResponse> save(@AuthUser Long userId,
-                                               @Valid @RequestBody RunCreateRequest request) {
-        return ApiResponse.success(runService.save(userId, request));
+                                               @Valid @RequestPart("run") RunCreateRequest request,
+                                               @RequestPart("image") MultipartFile image) {
+        return ApiResponse.success(runService.save(userId, request, image));
     }
 
     /**
