@@ -52,8 +52,16 @@ public class RunService {
     @Transactional
     public RunDetailResponse save(Long userId, RunCreateRequest request, MultipartFile image) {
         validate(request);
+
+        // 멱등키가 있으면 재전송인지 먼저 본다 — 이미지 저장 "전"에 판단해야 고아 파일이 안 생긴다.
+        RunDetailResponse duplicate = findDuplicate(userId, request.clientRunId());
+        if (duplicate != null) {
+            return duplicate;
+        }
+
         Run run = Run.builder()
                 .userId(userId)
+                .clientRunId(request.clientRunId())
                 .courseId(request.courseId())
                 .startLat(request.start().lat())
                 .startLng(request.start().lng())
@@ -116,6 +124,22 @@ public class RunService {
                 && request.finishedAt().isBefore(request.startedAt())) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "finishedAt은 startedAt보다 앞설 수 없습니다.");
         }
+    }
+
+    /**
+     * 같은 멱등키로 이미 저장된 기록이 있으면 그것을 응답으로 돌려준다(새로 만들지 않음).
+     *
+     * <p>{@code newAchievements} 는 <b>빈 배열</b>이다 — 업적은 첫 요청에서 이미 달성 처리됐고,
+     * 재전송이 도장을 다시 띄우게 하면 "최초 1회만" 규칙이 깨진다. 유실된 도장은
+     * 업적 목록({@code GET /achievements})에서 확인할 수 있다.
+     */
+    private RunDetailResponse findDuplicate(Long userId, String clientRunId) {
+        if (clientRunId == null || clientRunId.isBlank()) {
+            return null;   // 키를 안 보냈으면 중복 판단 불가 — 그대로 새로 저장한다
+        }
+        return runRepository.findByUserIdAndClientRunId(userId, clientRunId)
+                .map(existing -> toDetail(existing).withAchievements(List.of()))
+                .orElse(null);
     }
 
     /** 기록의 날짜 — 클라이언트가 종료 시각을 주면 그 값, 없으면 저장 시각. */

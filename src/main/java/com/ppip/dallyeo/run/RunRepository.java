@@ -6,6 +6,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 러닝 기록 영속성 (US-RUN-2). 본인 기록만, 기간(from/to) 선택 필터,
@@ -23,6 +24,9 @@ public interface RunRepository extends JpaRepository<Run, Long> {
     List<Run> findByOwnerAndPeriod(@Param("userId") Long userId,
                                    @Param("from") Instant from,
                                    @Param("to") Instant to);
+
+    /** 멱등키로 이미 저장된 기록 찾기 — 재전송 중복 방지(U5). */
+    Optional<Run> findByUserIdAndClientRunId(Long userId, String clientRunId);
 
     /** 본인이 완주한(저장한) 코스 id 집합 — 업적 판정용(U6). 자유 러닝(courseId null)은 제외. */
     @Query("SELECT DISTINCT r.courseId FROM Run r WHERE r.userId = :userId AND r.courseId IS NOT NULL")

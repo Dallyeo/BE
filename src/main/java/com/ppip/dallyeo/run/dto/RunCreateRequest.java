@@ -4,6 +4,7 @@ import com.ppip.dallyeo.course.dto.PolylinePoint;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
 
@@ -15,12 +16,18 @@ import java.time.Instant;
  *
  * <p>평균 페이스는 받지 않고 거리·시간에서 서버가 계산한다.
  *
+ * @param clientRunId 중복 저장 방지용 키(선택, 권장). 클라이언트가 러닝마다 UUID 하나를 만들어
+ *                    재전송 때도 <b>같은 값</b>을 보내면 서버가 중복을 막는다. 보내지 않으면
+ *                    재시도마다 새 기록이 쌓이고 되돌릴 방법이 없다.
  * @param courseId   시드 코스 참조. 직접 만든 경로면 null. <b>업적 판정(코스·지역·경유지)의 기준</b>이라
  *                   공식 코스를 달렸다면 반드시 보내야 한다.
  * @param startedAt  러닝 시작 시각. 얼리버드 업적 판정에만 쓰이며 없으면 그 업적만 판정하지 않는다.
  * @param finishedAt 러닝 종료 시각 = 기록의 날짜. <b>없으면 서버 저장 시각</b>을 쓴다.
  */
 public record RunCreateRequest(
+        @Size(max = 64, message = "clientRunId는 64자를 넘을 수 없습니다.")
+        String clientRunId,
+
         String courseId,
 
         @NotNull(message = "start(출발 좌표)는 필수입니다.")

@@ -5,7 +5,6 @@ import com.ppip.dallyeo.common.response.ApiResponse;
 import com.ppip.dallyeo.run.dto.RunCreateRequest;
 import com.ppip.dallyeo.run.dto.RunDetailResponse;
 import com.ppip.dallyeo.run.dto.RunSummaryResponse;
-import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,9 +28,11 @@ import java.util.List;
 public class RunController {
 
     private final RunService runService;
+    private final RunPartReader runPartReader;
 
-    public RunController(RunService runService) {
+    public RunController(RunService runService, RunPartReader runPartReader) {
         this.runService = runService;
+        this.runPartReader = runPartReader;
     }
 
     /**
@@ -40,12 +41,18 @@ public class RunController {
      * <p>파트 두 개: {@code run}(JSON, {@link RunCreateRequest}) · {@code image}(이미지 파일).
      * <b>이미지는 필수</b> — 전체 경로를 좌표로 저장하지 않고 이 이미지로 대신하기 때문이다.
      * 검증 실패 → 400.
+     *
+     * <p>{@code run} 파트를 {@code String} 으로 받아 직접 파싱한다. {@code @RequestPart} 로 바로
+     * 바인딩하면 <b>파트에 {@code Content-Type: application/json} 이 붙어 있어야만</b> 동작하는데,
+     * iOS/안드로이드의 기본 multipart 구현은 파트별 Content-Type 을 생략하는 경우가 많다.
+     * 그대로 두면 정상 요청이 500 으로 떨어져 클라이언트가 원인을 알 수 없다.
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<RunDetailResponse> save(@AuthUser Long userId,
-                                               @Valid @RequestPart("run") RunCreateRequest request,
+                                               @RequestPart("run") String runJson,
                                                @RequestPart("image") MultipartFile image) {
+        RunCreateRequest request = runPartReader.read(runJson);
         return ApiResponse.success(runService.save(userId, request, image));
     }
 

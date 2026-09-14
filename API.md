@@ -2,7 +2,7 @@
 
 > 현재까지 구현된 API입니다. 🌐 = 공개(토큰 불필요), 🔒 = 인증 필요.
 > **U1-a/U2/U3(공개 조회) + U4(인증·사용자) + U5(러닝 기록) + U6(업적)** 완료.
-> **최근 변경**: 코스 경유지에서 자동 생성 이름(`경유지1` 등) 제거 · 러닝 기록 이미지 업로드(`POST /runs/{id}/image`) 추가 · 코스 `imageUrl` 추가 · `/places` **목록 3종에 `badges` 추가** · `/places` **목록 3종에 `businessHours`/`openHours` 추가**(원문 정리 + 대표 영업시간 분리) · **`POST /runs` 구조 변경**(multipart, 이미지 필수, polyline → 출발·도착 좌표) · **전주 장소 조회 0건 결함 수정**(자치구 병합) · `POST /runs` 응답에 **`newAchievements` 추가**(결과창 도장, 최초 달성만) · 업적 **8종 → 21종 확장** + 응답에 `category`/`sortOrder`/`iconOnUrl`/`iconOffUrl` 추가. 사용자 코스 생성은 백엔드에 저장하지 않음(프론트/클라이언트 담당) — 사용자가 만든 경로는 러닝 기록의 출발·도착 좌표와 코스 이미지로 남습니다.
+> **최근 변경**: 코스 경유지에서 자동 생성 이름(`경유지1` 등) 제거 · 러닝 기록 이미지 업로드(`POST /runs/{id}/image`) 추가 · 코스 `imageUrl` 추가 · `/places` **목록 3종에 `badges` 추가** · `/places` **목록 3종에 `businessHours`/`openHours` 추가**(원문 정리 + 대표 영업시간 분리) · **`POST /runs` 구조 변경**(multipart, 이미지 필수, polyline → 출발·도착 좌표, `clientRunId` 멱등키) · **전주 장소 조회 0건 결함 수정**(자치구 병합) · `POST /runs` 응답에 **`newAchievements` 추가**(결과창 도장, 최초 달성만) · 업적 **8종 → 21종 확장** + 응답에 `category`/`sortOrder`/`iconOnUrl`/`iconOffUrl` 추가. 사용자 코스 생성은 백엔드에 저장하지 않음(프론트/클라이언트 담당) — 사용자가 만든 경로는 러닝 기록의 출발·도착 좌표와 코스 이미지로 남습니다.
 
 - **Base URL**: `https://dallyeo.cloud` (개발 로컬: `http://localhost:8080`)
 - **Content-Type**: `application/json; charset=UTF-8`
@@ -34,6 +34,16 @@
 ```
 - `details`는 입력 검증 실패(`VALIDATION_ERROR`)일 때만 포함, 그 외 생략.
 - 성공 시 `error` 키 없음 / 실패 시 `data` 키 없음.
+
+### ⚠️ 값이 없는 필드 — 엔드포인트마다 다릅니다
+| 대상 | 값이 없을 때 |
+|---|---|
+| **러닝 기록**(`/runs` 계열) | **키가 응답에서 통째로 빠집니다**(`null` 로 오지 않음) |
+| 그 외(장소·코스·업적 등) | `"businessHours": null` 처럼 **키는 있고 값이 `null`** |
+
+러닝 응답에서는 `courseId`·`courseName`·`startedAt`·`imageUrl`·`completionRate` 가 값이 없으면
+**키 자체가 없습니다.** 자바스크립트에서 `data.courseName` 은 `undefined` 가 되므로,
+`null` 비교(`=== null`)가 아니라 **존재 여부**로 판단하세요(옵셔널 체이닝 권장).
 
 ### 에러 코드 (프론트 분기용 고정 문자열)
 | code | HTTP | 의미 |
@@ -379,6 +389,9 @@ DELETE /users/me
 >
 > 저장은 **`multipart/form-data` 한 번**으로 기록 + 코스 이미지를 함께 보냅니다(7.1). 전체 경로(polyline)는
 > 보내지 않고 **출발·도착 좌표 2점**만 저장하며, 경로 그림은 클라이언트가 렌더링한 코스 이미지가 대신합니다.
+>
+> 📱 **비로그인 상태로 달린 기록을 가입 후 올리는 흐름, 재시도·캐시 전략은
+> [`aidlc-docs/client-run-sync-guide.md`](aidlc-docs/client-run-sync-guide.md) 에 따로 정리돼 있습니다.**
 
 ### 7.1 러닝 기록 저장
 ```
@@ -390,6 +403,7 @@ Content-Type: multipart/form-data
 **파트 `run`** (application/json)
 ```json
 {
+  "clientRunId": "7f3a9c2e-...",
   "courseId": "gunsan-jjamppong-run",
   "start": { "lat": 35.95, "lng": 126.68 },
   "end":   { "lat": 35.96, "lng": 126.69 },
@@ -402,9 +416,10 @@ Content-Type: multipart/form-data
 
 | 필드 | 필수 | 설명 |
 |---|:---:|---|
-| `start` / `end` | ✅ | 출발·도착 좌표. **전체 경로(polyline)는 보내지 않습니다** — 코스 이미지가 대신합니다 |
+| `start` / `end` | ✅ | 출발·도착 좌표. 키 이름은 **`lat` / `lng`** 입니다(`latitude`/`longitude` 아님). **전체 경로(polyline)는 보내지 않습니다** — 코스 이미지가 대신합니다 |
 | `distanceMeters` | ✅ | 0 이하 → 400 |
 | `durationSeconds` | ✅ | 0 이하 → 400 |
+| `clientRunId` | ❌ | **중복 저장 방지 키(권장)**. 아래 설명 참고 |
 | `courseId` | ❌ | 공식 코스면 id, 직접 만든 경로면 생략/`null`. **업적 판정의 기준**이라 공식 코스를 달렸으면 꼭 보내세요 |
 | `startedAt` | ❌ | 없으면 "얼리버드"(8시 이전 시작) 업적만 판정하지 않습니다 |
 | `finishedAt` | ❌ | **기록의 날짜**. 없으면 **서버 저장 시각**을 씁니다 |
@@ -414,6 +429,40 @@ Content-Type: multipart/form-data
 
 **파트 `image`** — JPEG/PNG/WebP/HEIC/HEIF, 최대 10MB. 러닝 경로를 그린 코스 이미지입니다.
 **누락 시 400.**
+
+#### 요청 예시
+```
+POST /runs
+Authorization: Bearer {accessToken}
+Content-Type: multipart/form-data; boundary=----X
+
+------X
+Content-Disposition: form-data; name="run"
+
+{"clientRunId":"7f3a9c2e-...","start":{"lat":35.95,"lng":126.68},
+ "end":{"lat":35.96,"lng":126.69},"distanceMeters":10480,"durationSeconds":3600,
+ "startedAt":"2026-09-13T07:00:00Z","finishedAt":"2026-09-13T08:00:00Z"}
+------X
+Content-Disposition: form-data; name="image"; filename="route.jpg"
+Content-Type: image/jpeg
+
+<바이너리>
+------X--
+```
+
+```bash
+curl -X POST https://dallyeo.cloud/runs \
+  -H "Authorization: Bearer $TOKEN" \
+  -F 'run={"start":{"lat":35.95,"lng":126.68},"end":{"lat":35.96,"lng":126.69},"distanceMeters":10480,"durationSeconds":3600}' \
+  -F "image=@route.jpg"
+```
+
+> ✅ **`run` 파트에 `Content-Type` 을 붙이지 않아도 됩니다.** 서버가 문자열로 받아 직접 파싱하므로
+> 생략하든 `application/json` 이든 `application/octet-stream` 이든 동일하게 동작합니다
+> (iOS/안드로이드 기본 multipart 구현은 파트별 Content-Type 을 생략하는 경우가 많습니다).
+>
+> 잘못된 입력은 전부 **400 `VALIDATION_ERROR`** 이며 어느 필드가 문제인지 메시지에 담깁니다:
+> `"durationSeconds는 필수입니다. / end(도착 좌표)는 필수입니다."`
 
 **Response 201**
 ```json
@@ -437,6 +486,53 @@ Content-Type: multipart/form-data
 ```
 > 서버가 채워주는 값: **`id`**(이후 이미지 교체에 사용) · `courseName` · `averagePaceSeconds` · `imageUrl` · `newAchievements`.
 > `completionRate`(완주율)는 아직 계산하지 않습니다(응답에서 생략).
+
+#### 🔑 `clientRunId` — 중복 저장 방지 (**모든 저장에 권장**)
+로그인 여부와 관계없이 **모든 `POST /runs` 에 보내세요.** 중복은 "응답 유실 후 재전송"에서
+생기는 것이라 일반 로그인 사용자도 똑같이 겪습니다(야외 러닝 종료 직후 전송이라 신호가 약한 경우가 잦고,
+사진이 붙은 multipart 라 전송 시간이 깁니다). 저장 버튼 더블탭·전송 중 앱 종료도 같은 결과가 됩니다.
+
+클라이언트가 **러닝마다 UUID 하나**를 만들어 보내고, **재전송할 때도 같은 값**을 씁니다.
+(러닝 시작/종료 시점에 한 번 만들어 두세요 — 전송할 때 만들면 재시도마다 값이 달라져 의미가 없습니다.)
+서버는 같은 키가 다시 오면 새로 만들지 않고 **기존 기록을 그대로 반환**합니다(HTTP 201).
+
+```
+1회차 전송 → id=1, 도장 3개
+2회차 전송(같은 키) → id=1, 도장 []   ← 새로 안 만들어짐
+3회차 전송(같은 키) → id=1, 도장 []
+저장된 기록: 1건
+```
+
+**왜 필요한가** — 저장은 됐는데 응답이 유실되면 클라이언트는 성공/실패를 구분할 수 없어 재전송합니다.
+그때 키가 없으면 **같은 러닝이 여러 건 쌓이고**, 러닝 삭제 API가 없어 **되돌릴 수 없습니다.**
+게다가 누적 업적(완주 10회·100km)이 부풀려져 **안 딴 업적이 영구히 달성 처리**됩니다.
+
+- **보내지 않으면 중복 판정을 하지 않습니다** — 재시도마다 새 기록이 쌓입니다.
+- 중복 응답의 `newAchievements`는 **항상 `[]`** 입니다. 도장은 첫 요청에서 이미 처리됐고,
+  재전송이 다시 띄우면 "최초 1회만" 규칙이 깨지기 때문입니다. 유실된 도장은 업적 목록(8.1)에서 확인됩니다.
+- 중복 요청에서는 **이미지도 새로 저장하지 않습니다**(첫 요청의 `imageUrl` 이 그대로 옵니다).
+- 최대 64자.
+
+> 📱 캐시·재시도 구현 방법은 [클라이언트 전송 가이드](aidlc-docs/client-run-sync-guide.md) 참고.
+>
+> 💡 **비로그인 러닝을 가입 후 올리는 경우는 위험이 더 큽니다** — 여러 건을 연속 전송하므로
+> 실패 확률이 누적됩니다. 다만 위험이 "더 큰" 것이지 그 경로에만 있는 문제가 아닙니다.
+>
+> 선택 필드로 둔 건 **하위 호환** 때문입니다(아직 안 보내는 클라이언트가 400 이 되지 않도록).
+> 앱이 모두 대응하면 필수로 바꿀 수 있습니다.
+
+#### 코스를 안 달렸을 때 (`courseId` 없음)
+**`null` 이 아니라 키가 빠집니다.**
+
+| 보낸 값 | 응답의 `courseId` | 응답의 `courseName` |
+|---|---|---|
+| `courseId` 생략 | **키 없음** | **키 없음** |
+| `"courseId": null` | **키 없음** | **키 없음** |
+| 존재하지 않는 코스 id | 보낸 값 그대로 | **키 없음** (코스를 못 찾음) |
+
+- 코스 id 는 **존재 검증을 하지 않습니다** — 없는 id 를 보내도 그대로 저장되고 201 입니다.
+  이때 `courseName` 만 빠지므로, 코스명은 `courseName` 유무로 판단하세요.
+- `courseId` 없이 저장하면 "개척자"(`PIONEER`) 업적 대상이 됩니다.
 
 #### 🏅 `newAchievements` — 러닝 결과창 도장
 - 이 러닝으로 **처음 달성한** 업적만 담깁니다. **결과창에 띄울 도장이 바로 이 배열**입니다.
@@ -471,8 +567,8 @@ Content-Type: multipart/form-data
   "success": true,
   "data": {
     "id": 1,
-    "courseId": "gunsan-modern-history-run | null",
-    "courseName": "근대 역사 박물관 런 | null",
+    "courseId": "gunsan-modern-history-run",     // 코스 없이 달렸으면 키 자체가 없음
+    "courseName": "근대 역사 박물관 런",            // 코스를 못 찾으면 키 자체가 없음
     "start": { "lat": 35.95, "lng": 126.68 },
     "end":   { "lat": 35.96, "lng": 126.69 },
     "distanceMeters": 10480,
@@ -503,7 +599,7 @@ GET /runs?from={ISO date}&to={ISO date}
   "data": [
     {
       "id": 1,
-      "courseName": "근대 역사 박물관 런 | null",
+      "courseName": "근대 역사 박물관 런",   // 코스 없이 달렸으면 키 자체가 없음
       "distanceMeters": 10480,
       "durationSeconds": 3600,
       "imageUrl": "/uploads/runs/3f2a....jpg",
