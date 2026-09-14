@@ -11,6 +11,7 @@ import com.ppip.dallyeo.run.dto.RunDetailResponse;
 import com.ppip.dallyeo.run.dto.RunSummaryResponse;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -46,7 +47,7 @@ class RunServiceTest {
             "image", "route.jpg", "image/jpeg", "fake".getBytes());
 
     private RunCreateRequest request(String courseId, Instant start, Instant end) {
-        return new RunCreateRequest(courseId, START, END, 10480, 3600, start, end);
+        return new RunCreateRequest(null, courseId, START, END, 10480, 3600, start, end);
     }
 
     private RunDetailResponse save(Long userId, RunCreateRequest request) {
@@ -280,7 +281,7 @@ class RunServiceTest {
         when(runRepository.save(any(Run.class))).thenAnswer(inv -> inv.getArgument(0));
         Instant before = Instant.now();
 
-        RunDetailResponse res = save(7L, new RunCreateRequest(null, START, END, 10480, 3600, null, null));
+        RunDetailResponse res = save(7L, new RunCreateRequest(null, null, START, END, 10480, 3600, null, null));
 
         assertThat(res.finishedAt()).isBetween(before, Instant.now());
         assertThat(res.startedAt()).isNull();   // 선택 필드 — 없어도 저장된다
@@ -309,5 +310,60 @@ class RunServiceTest {
         save(7L, request(null, started, finished));
 
         verify(imageStorage).store(eq(image), eq("runs"));
+    }
+    // ===== 멱등키(중복 저장 방지) =====
+
+    @Test
+    void sameClientRunId_returnsExistingRunInsteadOfCreatingAnother() {
+        // 저장은 됐는데 응답이 유실돼 재전송하는 상황.
+        Run existing = Run.builder().id(42L).userId(7L).clientRunId("abc")
+                .startLat(35.95).startLng(126.68).endLat(35.96).endLng(126.69)
+                .distanceMeters(10480).durationSeconds(3600).averagePaceSeconds(344)
+                .imageUrl("/uploads/runs/first.jpg").startedAt(started).finishedAt(finished).build();
+        when(runRepository.findByUserIdAndClientRunId(7L, "abc")).thenReturn(Optional.of(existing));
+
+        RunDetailResponse res = service.save(7L,
+                new RunCreateRequest("abc", null, START, END, 10480, 3600, started, finished), image);
+
+        assertThat(res.id()).isEqualTo(42L);
+        assertThat(res.imageUrl()).isEqualTo("/uploads/runs/first.jpg");
+        verify(runRepository, never()).save(any());
+        // 이미지도 다시 저장하지 않는다 — 고아 파일이 생기면 안 된다.
+        verify(imageStorage, never()).store(any(), any());
+        // 도장은 첫 요청에서 이미 처리됐다 — 재전송이 다시 띄우면 "최초 1회" 규칙이 깨진다.
+        assertThat(res.newAchievements()).isEmpty();
+    }
+
+    @Test
+    void differentClientRunId_savesSeparately() {
+        when(runRepository.findByUserIdAndClientRunId(7L, "new-key")).thenReturn(Optional.empty());
+        when(runRepository.save(any(Run.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.save(7L, new RunCreateRequest("new-key", null, START, END, 10480, 3600, started, finished), image);
+
+        verify(runRepository).save(any(Run.class));
+    }
+
+    @Test
+    void withoutClientRunId_doesNotDeduplicate() {
+        // 키를 안 보내면 중복 판단이 불가능하다 — 그대로 새로 저장된다(문서에 명시).
+        when(runRepository.save(any(Run.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        save(7L, request(null, started, finished));
+
+        verify(runRepository, never()).findByUserIdAndClientRunId(any(), any());
+        verify(runRepository).save(any(Run.class));
+    }
+
+    @Test
+    void savedRunKeepsClientRunId() {
+        when(runRepository.findByUserIdAndClientRunId(7L, "k1")).thenReturn(Optional.empty());
+        ArgumentCaptor<Run> saved = ArgumentCaptor.forClass(Run.class);
+        when(runRepository.save(any(Run.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.save(7L, new RunCreateRequest("k1", null, START, END, 10480, 3600, started, finished), image);
+
+        verify(runRepository).save(saved.capture());
+        assertThat(saved.getValue().getClientRunId()).isEqualTo("k1");
     }
 }

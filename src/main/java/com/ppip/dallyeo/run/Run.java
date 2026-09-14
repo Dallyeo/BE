@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,9 +26,13 @@ import java.time.Instant;
  * 코스 이미지({@code imageUrl})가 대신하므로 좌표 배열을 보관하지 않는다.
  */
 @Entity
-@Table(name = "run", indexes = {
-        @Index(name = "idx_run_user_finished", columnList = "userId, finishedAt")
-})
+@Table(name = "run",
+        indexes = { @Index(name = "idx_run_user_finished", columnList = "userId, finishedAt") },
+        uniqueConstraints = {
+                // 같은 사용자가 같은 clientRunId 로 두 번 저장하지 못하게. NULL 은 MySQL 에서
+                // 서로 다른 값으로 취급되므로, 키를 안 보낸 기록은 제약에 걸리지 않는다.
+                @UniqueConstraint(name = "uk_run_user_client", columnNames = {"userId", "clientRunId"})
+        })
 @Getter
 @Setter
 @NoArgsConstructor
@@ -42,6 +47,19 @@ public class Run {
     /** 소유자(토큰 사용자). 소유권 검증 키. */
     @Column(nullable = false)
     private Long userId;
+
+    /**
+     * 클라이언트가 만든 중복 방지 키(멱등키). 선택.
+     *
+     * <p>저장은 됐는데 응답이 유실되면 클라이언트는 성공/실패를 구분할 수 없어 재전송한다.
+     * 그때 같은 키가 오면 새로 만들지 않고 기존 기록을 돌려준다. 특히 비로그인 러닝을
+     * 가입 후 몰아서 올리는 경로에서 재시도가 잦다.
+     *
+     * <p>중복을 사후에 지울 방법이 없고(러닝 삭제 API 없음), 누적 업적(완주 10회·100km)이
+     * 부풀려지면 <b>되돌릴 수 없으므로</b> 서버에서 막는다.
+     */
+    @Column(length = 64)
+    private String clientRunId;
 
     /** 달린 시드 코스 참조. 자유 러닝/직접 만든 경로면 null. FK 제약·존재검증 없음. */
     private String courseId;

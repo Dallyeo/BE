@@ -19,7 +19,8 @@ import static org.mockito.Mockito.when;
 class RunControllerTest {
 
     private final RunService runService = mock(RunService.class);
-    private final RunController controller = new RunController(runService);
+    private final RunPartReader runPartReader = mock(RunPartReader.class);
+    private final RunController controller = new RunController(runService, runPartReader);
 
     private final Instant started = Instant.parse("2026-07-09T07:00:00Z");
     private final Instant finished = Instant.parse("2026-07-09T08:00:00Z");
@@ -32,13 +33,15 @@ class RunControllerTest {
 
     @Test
     void save_delegatesAndWraps() {
-        RunCreateRequest req = new RunCreateRequest(null,
+        RunCreateRequest req = new RunCreateRequest(null, null,
                 new PolylinePoint(35.95, 126.68), new PolylinePoint(35.96, 126.69),
                 10480, 3600, started, finished);
         MockMultipartFile image = new MockMultipartFile("image", "r.jpg", "image/jpeg", "x".getBytes());
+        String runJson = "{\"distanceMeters\":10480}";
+        when(runPartReader.read(runJson)).thenReturn(req);
         when(runService.save(7L, req, image)).thenReturn(detail());
 
-        ApiResponse<RunDetailResponse> res = controller.save(7L, req, image);
+        ApiResponse<RunDetailResponse> res = controller.save(7L, runJson, image);
 
         assertThat(res.success()).isTrue();
         assertThat(res.data().id()).isEqualTo(1L);
