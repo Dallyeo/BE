@@ -2,7 +2,7 @@
 
 > 현재까지 구현된 API입니다. 🌐 = 공개(토큰 불필요), 🔒 = 인증 필요.
 > **U1-a/U2/U3(공개 조회) + U4(인증·사용자) + U5(러닝 기록) + U6(업적)** 완료.
-> **최근 변경**: 코스 경유지에서 자동 생성 이름(`경유지1` 등) 제거 · 러닝 기록 이미지 업로드(`POST /runs/{id}/image`) 추가 · 코스 `imageUrl` 추가 · `/places` **목록 3종에 `badges` 추가** · `/places` **목록 3종에 `businessHours`/`openHours` 추가**(원문 정리 + 대표 영업시간 분리) · **`POST /runs` 구조 변경**(multipart, 이미지 필수, polyline → 출발·도착 좌표, `clientRunId` 멱등키) · **전주 장소 조회 0건 결함 수정**(자치구 병합) · `POST /runs` 응답에 **`newAchievements` 추가**(결과창 도장, 최초 달성만) · 업적 **8종 → 21종 확장** + 응답에 `category`/`sortOrder`/`iconOnUrl`/`iconOffUrl` 추가. 사용자 코스 생성은 백엔드에 저장하지 않음(프론트/클라이언트 담당) — 사용자가 만든 경로는 러닝 기록의 출발·도착 좌표와 코스 이미지로 남습니다.
+> **최근 변경**: 코스 경유지에서 자동 생성 이름(`경유지1` 등) 제거 · 러닝 기록 이미지 업로드(`POST /runs/{id}/image`) 추가 · 코스 `imageUrl` 추가 · `/places` **목록 3종에 `badges` 추가** · `/places` **목록 3종에 `businessHours`/`openHours` 추가**(원문 정리 + 대표 영업시간 분리) · **`POST /runs` 구조 변경**(multipart, 이미지 필수, polyline → 출발·도착 좌표, `clientRunId` 멱등키, `calories` 추가) · **전주 장소 조회 0건 결함 수정**(자치구 병합) · `POST /runs` 응답에 **`newAchievements` 추가**(결과창 도장, 최초 달성만) · 업적 **8종 → 21종 확장** + 응답에 `category`/`sortOrder`/`iconOnUrl`/`iconOffUrl` 추가. 사용자 코스 생성은 백엔드에 저장하지 않음(프론트/클라이언트 담당) — 사용자가 만든 경로는 러닝 기록의 출발·도착 좌표와 코스 이미지로 남습니다.
 
 - **Base URL**: `https://dallyeo.cloud` (개발 로컬: `http://localhost:8080`)
 - **Content-Type**: `application/json; charset=UTF-8`
@@ -41,7 +41,7 @@
 | **러닝 기록**(`/runs` 계열) | **키가 응답에서 통째로 빠집니다**(`null` 로 오지 않음) |
 | 그 외(장소·코스·업적 등) | `"businessHours": null` 처럼 **키는 있고 값이 `null`** |
 
-러닝 응답에서는 `courseId`·`courseName`·`startedAt`·`imageUrl`·`completionRate` 가 값이 없으면
+러닝 응답에서는 `courseId`·`courseName`·`startedAt`·`calories`·`completionRate` 가 값이 없으면
 **키 자체가 없습니다.** 자바스크립트에서 `data.courseName` 은 `undefined` 가 되므로,
 `null` 비교(`=== null`)가 아니라 **존재 여부**로 판단하세요(옵셔널 체이닝 권장).
 
@@ -409,6 +409,7 @@ Content-Type: multipart/form-data
   "end":   { "lat": 35.96, "lng": 126.69 },
   "distanceMeters": 10480,
   "durationSeconds": 3600,
+  "calories": 720,
   "startedAt":  "2026-09-13T07:00:00Z",
   "finishedAt": "2026-09-13T08:00:00Z"
 }
@@ -419,12 +420,14 @@ Content-Type: multipart/form-data
 | `start` / `end` | ✅ | 출발·도착 좌표. 키 이름은 **`lat` / `lng`** 입니다(`latitude`/`longitude` 아님). **전체 경로(polyline)는 보내지 않습니다** — 코스 이미지가 대신합니다 |
 | `distanceMeters` | ✅ | 0 이하 → 400 |
 | `durationSeconds` | ✅ | 0 이하 → 400 |
+| `calories` | ❌ | 소모 칼로리(kcal). **클라이언트 값을 그대로 저장**합니다 — iOS HealthKit 값이 서버 추정보다 정확하기 때문입니다. 음수 → 400. 보내지 않으면 응답에서도 키가 빠집니다 |
 | `clientRunId` | ❌ | **중복 저장 방지 키(권장)**. 아래 설명 참고 |
 | `courseId` | ❌ | 공식 코스면 id, 직접 만든 경로면 생략/`null`. **업적 판정의 기준**이라 공식 코스를 달렸으면 꼭 보내세요 |
 | `startedAt` | ❌ | 없으면 "얼리버드"(8시 이전 시작) 업적만 판정하지 않습니다 |
 | `finishedAt` | ❌ | **기록의 날짜**. 없으면 **서버 저장 시각**을 씁니다 |
 
 - `averagePaceSeconds`는 **보내지 않습니다** — 거리·시간으로 서버가 계산해 응답에 넣어줍니다.
+- 반대로 `calories`는 **서버가 계산하지 않습니다** — 보낸 값을 그대로 보관합니다.
 - 둘 다 보낼 때 `finishedAt < startedAt` → 400.
 
 **파트 `image`** — JPEG/PNG/WebP/HEIC/HEIF, 최대 10MB. 러닝 경로를 그린 코스 이미지입니다.
@@ -477,6 +480,7 @@ curl -X POST https://dallyeo.cloud/runs \
     "distanceMeters": 10480,
     "durationSeconds": 3600,
     "averagePaceSeconds": 344,
+    "calories": 720,
     "imageUrl": "/uploads/runs/fb63bae3-....jpg",
     "startedAt":  "2026-09-13T07:00:00Z",
     "finishedAt": "2026-09-13T08:00:00Z",
@@ -574,6 +578,7 @@ Content-Type: multipart/form-data
     "distanceMeters": 10480,
     "durationSeconds": 3600,
     "averagePaceSeconds": 344,
+    "calories": 720,
     "imageUrl": "/uploads/runs/3f2a....jpg",
     "startedAt": "2026-07-09T07:00:00Z",
     "finishedAt": "2026-07-09T08:00:00Z"

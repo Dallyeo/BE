@@ -47,7 +47,7 @@ class RunServiceTest {
             "image", "route.jpg", "image/jpeg", "fake".getBytes());
 
     private RunCreateRequest request(String courseId, Instant start, Instant end) {
-        return new RunCreateRequest(null, courseId, START, END, 10480, 3600, start, end);
+        return new RunCreateRequest(null, courseId, START, END, 10480, 3600, null, start, end);
     }
 
     private RunDetailResponse save(Long userId, RunCreateRequest request) {
@@ -281,7 +281,7 @@ class RunServiceTest {
         when(runRepository.save(any(Run.class))).thenAnswer(inv -> inv.getArgument(0));
         Instant before = Instant.now();
 
-        RunDetailResponse res = save(7L, new RunCreateRequest(null, null, START, END, 10480, 3600, null, null));
+        RunDetailResponse res = save(7L, new RunCreateRequest(null, null, START, END, 10480, 3600, null, null, null));
 
         assertThat(res.finishedAt()).isBetween(before, Instant.now());
         assertThat(res.startedAt()).isNull();   // 선택 필드 — 없어도 저장된다
@@ -323,7 +323,7 @@ class RunServiceTest {
         when(runRepository.findByUserIdAndClientRunId(7L, "abc")).thenReturn(Optional.of(existing));
 
         RunDetailResponse res = service.save(7L,
-                new RunCreateRequest("abc", null, START, END, 10480, 3600, started, finished), image);
+                new RunCreateRequest("abc", null, START, END, 10480, 3600, null, started, finished), image);
 
         assertThat(res.id()).isEqualTo(42L);
         assertThat(res.imageUrl()).isEqualTo("/uploads/runs/first.jpg");
@@ -339,7 +339,7 @@ class RunServiceTest {
         when(runRepository.findByUserIdAndClientRunId(7L, "new-key")).thenReturn(Optional.empty());
         when(runRepository.save(any(Run.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        service.save(7L, new RunCreateRequest("new-key", null, START, END, 10480, 3600, started, finished), image);
+        service.save(7L, new RunCreateRequest("new-key", null, START, END, 10480, 3600, null, started, finished), image);
 
         verify(runRepository).save(any(Run.class));
     }
@@ -361,9 +361,26 @@ class RunServiceTest {
         ArgumentCaptor<Run> saved = ArgumentCaptor.forClass(Run.class);
         when(runRepository.save(any(Run.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        service.save(7L, new RunCreateRequest("k1", null, START, END, 10480, 3600, started, finished), image);
+        service.save(7L, new RunCreateRequest("k1", null, START, END, 10480, 3600, null, started, finished), image);
 
         verify(runRepository).save(saved.capture());
         assertThat(saved.getValue().getClientRunId()).isEqualTo("k1");
+    }
+    @Test
+    void save_keepsClientProvidedCalories() {
+        // 칼로리는 서버가 추정하지 않고 클라이언트(HealthKit) 값을 그대로 보관한다.
+        when(runRepository.save(any(Run.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        RunDetailResponse res = service.save(7L,
+                new RunCreateRequest(null, null, START, END, 10480, 3600, 720, started, finished), image);
+
+        assertThat(res.calories()).isEqualTo(720);
+    }
+
+    @Test
+    void save_withoutCalories_leavesItNull() {
+        when(runRepository.save(any(Run.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThat(save(7L, request(null, started, finished)).calories()).isNull();
     }
 }

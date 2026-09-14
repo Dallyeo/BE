@@ -28,14 +28,14 @@ class RunControllerTest {
     private RunDetailResponse detail() {
         return new RunDetailResponse(1L, null, null,
                 new PolylinePoint(35.95, 126.68), new PolylinePoint(35.96, 126.69),
-                10480, 3600, 343, "/uploads/runs/x.jpg", null, started, finished, null);
+                10480, 3600, 343, 720, "/uploads/runs/x.jpg", null, started, finished, null);
     }
 
     @Test
     void save_delegatesAndWraps() {
         RunCreateRequest req = new RunCreateRequest(null, null,
                 new PolylinePoint(35.95, 126.68), new PolylinePoint(35.96, 126.69),
-                10480, 3600, started, finished);
+                10480, 3600, null, started, finished);
         MockMultipartFile image = new MockMultipartFile("image", "r.jpg", "image/jpeg", "x".getBytes());
         String runJson = "{\"distanceMeters\":10480}";
         when(runPartReader.read(runJson)).thenReturn(req);

@@ -26,6 +26,7 @@ public record RunDetailResponse(
         int distanceMeters,
         int durationSeconds,
         int averagePaceSeconds,
+        Integer calories,
         String imageUrl,
         Double completionRate,
         Instant startedAt,
@@ -36,14 +37,14 @@ public record RunDetailResponse(
     /** 조회 응답용 — 도장은 저장 응답에만 실린다. */
     public RunDetailResponse withoutAchievements() {
         return new RunDetailResponse(id, courseId, courseName, start, end, distanceMeters,
-                durationSeconds, averagePaceSeconds, imageUrl, completionRate,
+                durationSeconds, averagePaceSeconds, calories, imageUrl, completionRate,
                 startedAt, finishedAt, null);
     }
 
     /** 저장 응답용 — 이번에 처음 달성한 업적을 도장으로 싣는다. */
     public RunDetailResponse withAchievements(List<AchievementResponse> newAchievements) {
         return new RunDetailResponse(id, courseId, courseName, start, end, distanceMeters,
-                durationSeconds, averagePaceSeconds, imageUrl, completionRate,
+                durationSeconds, averagePaceSeconds, calories, imageUrl, completionRate,
                 startedAt, finishedAt, newAchievements);
     }
 }
