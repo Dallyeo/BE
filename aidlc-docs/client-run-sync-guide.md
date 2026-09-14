@@ -62,6 +62,7 @@
 | `finishedAt` | ISO8601 | **없으면 달린 날짜가 아니라 "업로드한 날짜"로 기록됨** |
 | `distanceMeters` | Int | |
 | `durationSeconds` | Int | |
+| `calories` | Int? | 소모 칼로리(kcal). 있으면 같이 저장해 두세요 — 나중에 올릴 때 다시 계산할 수 없습니다 |
 | `start` / `end` | {lat, lng} | 출발·도착 좌표 |
 | `courseId` | String? | 공식 코스를 달렸을 때만. **업적 9종의 판정 기준** |
 | 이미지 파일 경로 | String | 코스 이미지. 업로드 시 필수 |
@@ -89,6 +90,7 @@
   "end":   { "lat": 35.96, "lng": 126.69 },
   "distanceMeters": 10480,
   "durationSeconds": 3600,
+  "calories": 720,
   "startedAt":  "2026-09-13T07:00:00Z",
   "finishedAt": "2026-09-13T08:00:00Z",
   "imagePath": "file:///.../runs/7f3a9c2e.jpg"
@@ -110,7 +112,7 @@ Content-Type: multipart/form-data
 ```bash
 curl -X POST https://dallyeo.cloud/runs \
   -H "Authorization: Bearer $TOKEN" \
-  -F 'run={"clientRunId":"7f3a9c2e-...","courseId":"gunsan-jjamppong-run","start":{"lat":35.95,"lng":126.68},"end":{"lat":35.96,"lng":126.69},"distanceMeters":10480,"durationSeconds":3600,"startedAt":"2026-09-13T07:00:00Z","finishedAt":"2026-09-13T08:00:00Z"}' \
+  -F 'run={"clientRunId":"7f3a9c2e-...","courseId":"gunsan-jjamppong-run","start":{"lat":35.95,"lng":126.68},"end":{"lat":35.96,"lng":126.69},"distanceMeters":10480,"durationSeconds":3600,"calories":720,"startedAt":"2026-09-13T07:00:00Z","finishedAt":"2026-09-13T08:00:00Z"}' \
   -F "image=@route.jpg"
 ```
 
@@ -121,6 +123,7 @@ curl -X POST https://dallyeo.cloud/runs \
 - 좌표 키는 **`lat` / `lng`** 입니다. `latitude`/`longitude` 가 아닙니다.
 - 이미지 형식: JPEG / PNG / WebP / HEIC / HEIF, **최대 10MB**.
 - `averagePaceSeconds` 는 **보내지 않습니다** — 서버가 거리÷시간으로 계산해 응답에 담아줍니다.
+- `calories` 는 반대로 **보낸 값을 서버가 그대로 저장**합니다(HealthKit 값이 서버 추정보다 정확).
 
 ### 응답 (201)
 
@@ -135,6 +138,7 @@ curl -X POST https://dallyeo.cloud/runs \
     "distanceMeters": 10480,
     "durationSeconds": 3600,
     "averagePaceSeconds": 344,
+    "calories": 720,
     "imageUrl": "/uploads/runs/fb63bae3-....jpg",
     "startedAt":  "2026-09-13T07:00:00Z",
     "finishedAt": "2026-09-13T08:00:00Z",

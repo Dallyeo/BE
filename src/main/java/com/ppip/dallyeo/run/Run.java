@@ -85,6 +85,15 @@ public class Run {
     /** 평균 페이스(초/km). 거리·시간에서 서버가 계산한다(클라이언트 값을 받지 않는다). */
     private int averagePaceSeconds;
 
+    /**
+     * 소모 칼로리(kcal). 클라이언트가 준 값을 그대로 보관하며, 없으면 null.
+     *
+     * <p>페이스와 달리 서버가 계산하지 않는다 — iOS 는 HealthKit 에서 심박·모션까지 반영된 값을
+     * 얻을 수 있어, 서버가 체중·거리·시간만으로 추정하는 것보다 정확하다.
+     * (서버의 {@code User.weight} 는 비어 있을 수 있어 추정 자체가 불가능한 경우도 있다.)
+     */
+    private Integer calories;
+
     /** 기록 이미지 공개 URL 경로(예: /uploads/runs/{uuid}.jpg). 저장 시 필수. */
     @Column(nullable = false)
     private String imageUrl;

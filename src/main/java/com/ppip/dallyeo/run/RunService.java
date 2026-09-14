@@ -70,6 +70,7 @@ public class RunService {
                 .distanceMeters(request.distanceMeters())
                 .durationSeconds(request.durationSeconds())
                 .averagePaceSeconds(paceSeconds(request.distanceMeters(), request.durationSeconds()))
+                .calories(request.calories())
                 .imageUrl(imageStorage.store(image, IMAGE_CATEGORY))
                 .startedAt(request.startedAt())
                 .finishedAt(runDate(request))
@@ -162,6 +163,7 @@ public class RunService {
                 run.getDistanceMeters(),
                 run.getDurationSeconds(),
                 run.getAveragePaceSeconds(),
+                run.getCalories(),
                 run.getImageUrl(),
                 null,
                 run.getStartedAt(),
