@@ -1996,7 +1996,8 @@
         "name": "군산 근대 역사 박물관",
         "polylineIndex": 390
       }
-    ]
+    ],
+    "imageUrl": "/images/courses/gunsan-modern-history-run.png"
   },
   {
     "id": "gunsan-saemangeum-run",
@@ -5320,7 +5321,8 @@
         "name": "장자도 방파제",
         "polylineIndex": 659
       }
-    ]
+    ],
+    "imageUrl": "/images/courses/gunsan-saemangeum-run.png"
   },
   {
     "id": "gunsan-jjamppong-run",
@@ -6257,7 +6259,8 @@
         "name": "짬뽕특화거리",
         "polylineIndex": 180
       }
-    ]
+    ],
+    "imageUrl": "/images/courses/gunsan-jjamppong-run.png"
   },
   {
     "id": "gunsan-seonyudo-beach-run",
@@ -7390,7 +7393,8 @@
         "name": "몽돌해변",
         "polylineIndex": 220
       }
-    ]
+    ],
+    "imageUrl": "/images/courses/gunsan-seonyudo-beach-run.png"
   },
   {
     "id": "gunsan-wetland-eco-run",
@@ -9024,7 +9028,8 @@
         "name": "군산 습지 생태 공원",
         "polylineIndex": 321
       }
-    ]
+    ],
+    "imageUrl": "/images/courses/gunsan-wetland-eco-run.png"
   },
   {
     "id": "gunsan-cypress-forest-run",
@@ -10668,7 +10673,8 @@
         "name": "편백치유의 숲",
         "polylineIndex": 323
       }
-    ]
+    ],
+    "imageUrl": "/images/courses/gunsan-cypress-forest-run.png"
   },
   {
     "id": "jeonju-hanok-village-run",
@@ -11259,7 +11265,8 @@
         "name": "전동성당",
         "polylineIndex": 110
       }
-    ]
+    ],
+    "imageUrl": "/images/courses/jeonju-hanok-village-run.png"
   },
   {
     "id": "jeonju-ajung-lake-run",
@@ -12648,7 +12655,8 @@
         "name": "도착지",
         "polylineIndex": 272
       }
-    ]
+    ],
+    "imageUrl": "/images/courses/jeonju-ajung-lake-run.png"
   },
   {
     "id": "jeonju-zoo-run",
@@ -13682,7 +13690,8 @@
         "name": "전주동물원",
         "polylineIndex": 201
       }
-    ]
+    ],
+    "imageUrl": "/images/courses/jeonju-zoo-run.png"
   },
   {
     "id": "jeonju-catholic-shrine-run",
@@ -15041,6 +15050,7 @@
         "name": "치명자산성지 평화의전당",
         "polylineIndex": 266
       }
-    ]
+    ],
+    "imageUrl": "/images/courses/jeonju-catholic-shrine-run.png"
   }
 ]

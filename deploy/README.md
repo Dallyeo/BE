@@ -109,6 +109,7 @@ sudo mysql -u root -p dallyeo -e "SHOW COLUMNS FROM user_achievement LIKE 'achie
 |---|---|---|---|---|
 | 2026-09-13 | `migrate-user-achievement-varchar.sql` | `user_achievement.achievement` enum → `VARCHAR(40)` | 업적 8종→21종 확장. Hibernate 가 만든 네이티브 enum 컬럼이 옛 8종만 허용해 신규 업적 저장이 500 으로 실패 | ✅ 적용됨 |
 | 2026-09-13 | `migrate-run-start-end-coords.sql` | `DROP TABLE run` (앱이 새 스키마로 재생성) + 업로드 이미지 정리 | 러닝 저장 구조 변경 — polyline 제거·출발/도착 좌표 추가·image_url NOT NULL·started_at NULL 허용·client_run_id(멱등키) 추가. 컬럼 삭제/NULL 변경이라 ddl-auto 로는 불가. **기존 기록 전부 삭제됨** · 이미지 파일도 `sudo rm -f $UPLOAD_DIR/runs/*` 로 같이 정리 | ⬜ 미적용 |
+| 2026-09-15 | `update-course-images.sql` | `course.image_url` 백필 10건 | 코스 대표 이미지 수급 완료. 시드 로더는 기존 행을 갱신하지 않으므로 직접 채워야 함. 이미지 파일은 classpath static 이라 JAR 에 포함 — 서버 업로드 불필요. **배포 후** 실행, 순서 무관 | ⬜ 미적용 |
 
 ## 주의
 - `spring.jpa.hibernate.ddl-auto=update`: 블루·그린이 같은 스키마 공유 → 컬럼 삭제/변경형 배포는 위험. 추가형만 안전. 운영 안정화 시 Flyway 전환 권장.
