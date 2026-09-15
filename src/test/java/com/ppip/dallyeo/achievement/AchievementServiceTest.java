@@ -9,6 +9,7 @@ import com.ppip.dallyeo.domain.region.Region;
 import com.ppip.dallyeo.run.Run;
 import com.ppip.dallyeo.run.RunRepository;
 import org.junit.jupiter.api.BeforeEach;
+import com.ppip.dallyeo.common.util.PublicUrlResolver;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -29,7 +30,7 @@ class AchievementServiceTest {
     private final RunRepository runRepository = mock(RunRepository.class);
     private final CourseRepository courseRepository = mock(CourseRepository.class);
     private final AchievementService service =
-            new AchievementService(userAchievementRepository, runRepository, courseRepository);
+            new AchievementService(userAchievementRepository, runRepository, courseRepository, new PublicUrlResolver("https://test.dallyeo.cloud"));
 
     private static final List<String> GUNSAN_IDS = List.of(
             "gunsan-modern-history-run", "gunsan-saemangeum-run", "gunsan-jjamppong-run",
@@ -178,8 +179,8 @@ class AchievementServiceTest {
                 .containsSubsequence("GUNSAN", "JEONJU", "COMMON");
         assertThat(res.stream().filter(a -> a.code().equals("JJAMPPONG")).findFirst().orElseThrow())
                 .satisfies(a -> {
-                    assertThat(a.iconOnUrl()).isEqualTo("/images/achievements/jjamppong_on.webp");
-                    assertThat(a.iconOffUrl()).isEqualTo("/images/achievements/jjamppong_off.webp");
+                    assertThat(a.iconOnUrl()).isEqualTo("https://test.dallyeo.cloud/images/achievements/jjamppong_on.webp");
+                    assertThat(a.iconOffUrl()).isEqualTo("https://test.dallyeo.cloud/images/achievements/jjamppong_off.webp");
                 });
     }
 

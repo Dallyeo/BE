@@ -12,6 +12,7 @@ import com.ppip.dallyeo.run.dto.RunSummaryResponse;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 import org.mockito.ArgumentCaptor;
+import com.ppip.dallyeo.common.util.PublicUrlResolver;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -36,7 +37,7 @@ class RunServiceTest {
     private final com.ppip.dallyeo.common.storage.ImageStorage imageStorage =
             mock(com.ppip.dallyeo.common.storage.ImageStorage.class);
     private final RunService service =
-            new RunService(runRepository, courseRepository, achievementService, imageStorage);
+            new RunService(runRepository, courseRepository, achievementService, imageStorage, new PublicUrlResolver("https://test.dallyeo.cloud"));
 
     private final Instant started = Instant.parse("2026-07-09T07:00:00Z");
     private final Instant finished = Instant.parse("2026-07-09T08:00:00Z");
@@ -166,7 +167,8 @@ class RunServiceTest {
 
         RunDetailResponse res = service.attachImage(7L, 1L, image);
 
-        assertThat(res.imageUrl()).isEqualTo("/uploads/runs/abc.jpg");
+        // 응답은 전체 URL, DB(엔티티)에는 상대 경로가 저장된다 — 도메인이 바뀌어도 데이터는 그대로다.
+        assertThat(res.imageUrl()).isEqualTo("https://test.dallyeo.cloud/uploads/runs/abc.jpg");
         assertThat(run.getImageUrl()).isEqualTo("/uploads/runs/abc.jpg");
     }
 
@@ -212,8 +214,8 @@ class RunServiceTest {
         when(runRepository.findById(1L)).thenReturn(Optional.of(run));
         when(runRepository.findByOwnerAndPeriod(eq(7L), any(), any())).thenReturn(List.of(run));
 
-        assertThat(service.getDetail(7L, 1L).imageUrl()).isEqualTo("/uploads/runs/abc.jpg");
-        assertThat(service.list(7L, null, null).get(0).imageUrl()).isEqualTo("/uploads/runs/abc.jpg");
+        assertThat(service.getDetail(7L, 1L).imageUrl()).isEqualTo("https://test.dallyeo.cloud/uploads/runs/abc.jpg");
+        assertThat(service.list(7L, null, null).get(0).imageUrl()).isEqualTo("https://test.dallyeo.cloud/uploads/runs/abc.jpg");
     }
     // ===== 결과창 도장 (POST /runs 응답에만, 최초 달성만) =====
 
@@ -272,7 +274,7 @@ class RunServiceTest {
 
         assertThat(res.start()).isEqualTo(START);
         assertThat(res.end()).isEqualTo(END);
-        assertThat(res.imageUrl()).isEqualTo("/uploads/runs/a.jpg");
+        assertThat(res.imageUrl()).isEqualTo("https://test.dallyeo.cloud/uploads/runs/a.jpg");
     }
 
     @Test
@@ -326,7 +328,7 @@ class RunServiceTest {
                 new RunCreateRequest("abc", null, START, END, 10480, 3600, null, started, finished), image);
 
         assertThat(res.id()).isEqualTo(42L);
-        assertThat(res.imageUrl()).isEqualTo("/uploads/runs/first.jpg");
+        assertThat(res.imageUrl()).isEqualTo("https://test.dallyeo.cloud/uploads/runs/first.jpg");
         verify(runRepository, never()).save(any());
         // 이미지도 다시 저장하지 않는다 — 고아 파일이 생기면 안 된다.
         verify(imageStorage, never()).store(any(), any());

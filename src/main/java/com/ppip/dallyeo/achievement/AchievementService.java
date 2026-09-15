@@ -2,6 +2,7 @@ package com.ppip.dallyeo.achievement;
 
 import com.ppip.dallyeo.achievement.dto.AchievementResponse;
 import com.ppip.dallyeo.common.exception.BusinessException;
+import com.ppip.dallyeo.common.util.PublicUrlResolver;
 import com.ppip.dallyeo.common.exception.ErrorCode;
 import com.ppip.dallyeo.course.Course;
 import com.ppip.dallyeo.course.CourseRepository;
@@ -34,13 +35,16 @@ public class AchievementService {
     private final UserAchievementRepository userAchievementRepository;
     private final RunRepository runRepository;
     private final CourseRepository courseRepository;
+    private final PublicUrlResolver urls;
 
     public AchievementService(UserAchievementRepository userAchievementRepository,
                               RunRepository runRepository,
-                              CourseRepository courseRepository) {
+                              CourseRepository courseRepository,
+                              PublicUrlResolver urls) {
         this.userAchievementRepository = userAchievementRepository;
         this.runRepository = runRepository;
         this.courseRepository = courseRepository;
+        this.urls = urls;
     }
 
     /**
@@ -170,7 +174,7 @@ public class AchievementService {
         return new AchievementResponse(
                 type.name(), type.category().name(), type.sortOrder(),
                 type.displayName(), type.description(),
-                type.iconOnUrl(), type.iconOffUrl(),
+                urls.absolute(type.iconOnUrl()), urls.absolute(type.iconOffUrl()),
                 unlocked, unlockedAt);
     }
 }
