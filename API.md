@@ -2,7 +2,7 @@
 
 > 현재까지 구현된 API입니다. 🌐 = 공개(토큰 불필요), 🔒 = 인증 필요.
 > **U1-a/U2/U3(공개 조회) + U4(인증·사용자) + U5(러닝 기록) + U6(업적)** 완료.
-> **최근 변경**: 코스 경유지에서 자동 생성 이름(`경유지1` 등) 제거 · 러닝 기록 이미지 업로드(`POST /runs/{id}/image`) 추가 · 코스 `imageUrl` 추가(**이미지 10종 전부 배치 완료**) · `/places` **목록 3종에 `badges` 추가** · `/places` **목록 3종에 `businessHours`/`openHours` 추가**(원문 정리 + 대표 영업시간 분리) · **`POST /runs` 구조 변경**(multipart, 이미지 필수, polyline → 출발·도착 좌표, `clientRunId` 멱등키, `calories` 추가) · **전주 장소 조회 0건 결함 수정**(자치구 병합) · `POST /runs` 응답에 **`newAchievements` 추가**(결과창 도장, 최초 달성만) · 업적 **8종 → 21종 확장** + 응답에 `category`/`sortOrder`/`iconOnUrl`/`iconOffUrl` 추가. 사용자 코스 생성은 백엔드에 저장하지 않음(프론트/클라이언트 담당) — 사용자가 만든 경로는 러닝 기록의 출발·도착 좌표와 코스 이미지로 남습니다.
+> **최근 변경**: 코스 경유지에서 자동 생성 이름(`경유지1` 등) 제거 · 러닝 기록 이미지 업로드(`POST /runs/{id}/image`) 추가 · 코스 `imageUrl` 추가(**이미지 10종 전부 배치 완료**) · **모든 이미지 URL을 전체 URL로 통일** · `/places` **목록 3종에 `badges` 추가** · `/places` **목록 3종에 `businessHours`/`openHours` 추가**(원문 정리 + 대표 영업시간 분리) · **`POST /runs` 구조 변경**(multipart, 이미지 필수, polyline → 출발·도착 좌표, `clientRunId` 멱등키, `calories` 추가) · **전주 장소 조회 0건 결함 수정**(자치구 병합) · `POST /runs` 응답에 **`newAchievements` 추가**(결과창 도장, 최초 달성만) · 업적 **8종 → 21종 확장** + 응답에 `category`/`sortOrder`/`iconOnUrl`/`iconOffUrl` 추가. 사용자 코스 생성은 백엔드에 저장하지 않음(프론트/클라이언트 담당) — 사용자가 만든 경로는 러닝 기록의 출발·도착 좌표와 코스 이미지로 남습니다.
 
 - **Base URL**: `https://dallyeo.cloud` (개발 로컬: `http://localhost:8080`)
 - **Content-Type**: `application/json; charset=UTF-8`
@@ -34,6 +34,19 @@
 ```
 - `details`는 입력 검증 실패(`VALIDATION_ERROR`)일 때만 포함, 그 외 생략.
 - 성공 시 `error` 키 없음 / 실패 시 `data` 키 없음.
+
+### 🖼 이미지 URL — 전부 **전체 URL**로 내려갑니다
+응답의 모든 이미지 필드는 도메인이 포함된 완전한 주소입니다. **앞에 무엇도 붙이지 마세요.**
+
+```
+course.imageUrl       https://dallyeo.cloud/images/courses/gunsan-jjamppong-run.png
+achievement.iconOnUrl https://dallyeo.cloud/images/achievements/jjamppong_on.webp
+run.imageUrl          https://dallyeo.cloud/uploads/runs/77c39a3a-....jpg
+place.thumbnailUrl    http://tong.visitkorea.or.kr/...   ← 관광공사 이미지(외부 도메인)
+```
+
+장소 이미지는 한국관광공사가 제공하는 외부 URL이라 도메인이 다릅니다. 그래도 **그대로 쓰면 됩니다.**
+값이 없으면 필드가 `null` 이거나 키가 빠집니다(아래 참고).
 
 ### ⚠️ 값이 없는 필드 — 엔드포인트마다 다릅니다
 | 대상 | 값이 없을 때 |
@@ -102,7 +115,7 @@ GET /courses?region={GUNSAN|JEONJU}&distance={SHORT|MEDIUM|LONG}
       "id": "jeonju-hanok-village-run",
       "name": "한옥마을 둘레길 코스",
       "description": "전주 한옥마을 일대를 가볍게 한 바퀴 도는 코스입니다. 곳곳에 자리한 크고 작은 문화유산을 둘러보며 전주의 정취를 느껴보세요.",
-      "imageUrl": "/images/courses/jeonju-hanok-village-run.png",
+      "imageUrl": "https://dallyeo.cloud/images/courses/jeonju-hanok-village-run.png",
       "region": "JEONJU",
       "distanceCategory": "SHORT",
       "totalMeters": 2799,
@@ -126,7 +139,7 @@ GET /courses/{id}
     "id": "jeonju-hanok-village-run",
     "name": "한옥마을 둘레길 코스",
     "description": "전주 한옥마을 일대를 가볍게 한 바퀴 도는 코스입니다. 곳곳에 자리한 크고 작은 문화유산을 둘러보며 전주의 정취를 느껴보세요.",
-    "imageUrl": "/images/courses/jeonju-hanok-village-run.png",
+    "imageUrl": "https://dallyeo.cloud/images/courses/jeonju-hanok-village-run.png",
     "region": "JEONJU",
     "distanceCategory": "SHORT",
     "totalMeters": 2799,
@@ -481,7 +494,7 @@ curl -X POST https://dallyeo.cloud/runs \
     "durationSeconds": 3600,
     "averagePaceSeconds": 344,
     "calories": 720,
-    "imageUrl": "/uploads/runs/fb63bae3-....jpg",
+    "imageUrl": "https://dallyeo.cloud/uploads/runs/fb63bae3-....jpg",
     "startedAt":  "2026-09-13T07:00:00Z",
     "finishedAt": "2026-09-13T08:00:00Z",
     "newAchievements": [ ... ]
@@ -579,14 +592,13 @@ Content-Type: multipart/form-data
     "durationSeconds": 3600,
     "averagePaceSeconds": 344,
     "calories": 720,
-    "imageUrl": "/uploads/runs/3f2a....jpg",
+    "imageUrl": "https://dallyeo.cloud/uploads/runs/3f2a....jpg",
     "startedAt": "2026-07-09T07:00:00Z",
     "finishedAt": "2026-07-09T08:00:00Z"
   }
 }
 ```
-- `imageUrl`은 **서버 기준 절대 경로**입니다. 표시할 때 API 베이스 URL을 앞에 붙이세요
-  (예: `https://dallyeo.cloud/uploads/runs/3f2a....jpg`).
+- `imageUrl`은 **도메인이 포함된 전체 URL**입니다. 그대로 쓰면 됩니다.
 - 이미지 조회는 **인증 없이** 가능합니다(파일명이 UUID라 URL을 모르면 접근 불가).
 - 파일명은 서버가 UUID로 새로 짓습니다 — 클라이언트가 보낸 파일명은 사용되지 않습니다.
 
@@ -607,7 +619,7 @@ GET /runs?from={ISO date}&to={ISO date}
       "courseName": "근대 역사 박물관 런",   // 코스 없이 달렸으면 키 자체가 없음
       "distanceMeters": 10480,
       "durationSeconds": 3600,
-      "imageUrl": "/uploads/runs/3f2a....jpg",
+      "imageUrl": "https://dallyeo.cloud/uploads/runs/3f2a....jpg",
       "finishedAt": "2026-07-09T08:00:00Z"
     }
   ]
@@ -629,8 +641,7 @@ GET /runs/{id}
 
 ### 도장 이미지
 - `iconOnUrl`(획득=컬러) / `iconOffUrl`(미획득=흑백)을 **둘 다** 내려줍니다. `unlocked` 값으로 골라 쓰세요.
-- 경로는 서버 절대경로이고 **인증 없이** 접근됩니다. 앞에 API base URL을 붙이면 됩니다
-  (예: `https://dallyeo.cloud/images/achievements/jjamppong_on.webp`).
+- **도메인이 포함된 전체 URL**로 내려갑니다. 그대로 쓰면 되고 **인증 없이** 접근됩니다.
 - 포맷은 **WebP** 450×450 투명배경. 21종 × 2상태 = 42장.
 
 ### 분류(`category`)
@@ -687,8 +698,8 @@ GET /achievements
       "sortOrder": 30,
       "name": "짬뽕을 먹을 자격이 있는 자",
       "description": "군산의 짬뽕거리 코스를 완주했다.",
-      "iconOnUrl": "/images/achievements/jjamppong_on.webp",
-      "iconOffUrl": "/images/achievements/jjamppong_off.webp",
+      "iconOnUrl": "https://dallyeo.cloud/images/achievements/jjamppong_on.webp",
+      "iconOffUrl": "https://dallyeo.cloud/images/achievements/jjamppong_off.webp",
       "unlocked": true,
       "unlockedAt": "2026-07-09T07:35:10Z"
     },
@@ -698,8 +709,8 @@ GET /achievements
       "sortOrder": 200,
       "name": "뚜벅이",
       "description": "완주시 페이스가 키로당 몇분",
-      "iconOnUrl": "/images/achievements/slow_walker_on.webp",
-      "iconOffUrl": "/images/achievements/slow_walker_off.webp",
+      "iconOnUrl": "https://dallyeo.cloud/images/achievements/slow_walker_on.webp",
+      "iconOffUrl": "https://dallyeo.cloud/images/achievements/slow_walker_off.webp",
       "unlocked": false,
       "unlockedAt": null
     }

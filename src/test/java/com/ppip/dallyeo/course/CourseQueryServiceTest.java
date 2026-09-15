@@ -7,6 +7,7 @@ import com.ppip.dallyeo.course.dto.CourseSummary;
 import com.ppip.dallyeo.course.dto.PolylinePoint;
 import com.ppip.dallyeo.course.dto.WaypointAnchor;
 import com.ppip.dallyeo.domain.region.Region;
+import com.ppip.dallyeo.common.util.PublicUrlResolver;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -20,7 +21,7 @@ import static org.mockito.Mockito.when;
 class CourseQueryServiceTest {
 
     private final CourseRepository repository = mock(CourseRepository.class);
-    private final CourseQueryService service = new CourseQueryService(repository);
+    private final CourseQueryService service = new CourseQueryService(repository, new PublicUrlResolver("https://test.dallyeo.cloud"));
 
     private Course sample() {
         return Course.builder()

@@ -139,7 +139,7 @@ curl -X POST https://dallyeo.cloud/runs \
     "durationSeconds": 3600,
     "averagePaceSeconds": 344,
     "calories": 720,
-    "imageUrl": "/uploads/runs/fb63bae3-....jpg",
+    "imageUrl": "https://dallyeo.cloud/uploads/runs/fb63bae3-....jpg",
     "startedAt":  "2026-09-13T07:00:00Z",
     "finishedAt": "2026-09-13T08:00:00Z",
     "newAchievements": [ /* 이번에 처음 딴 업적 */ ]

@@ -5,6 +5,7 @@ import com.ppip.dallyeo.achievement.dto.AchievementResponse;
 import com.ppip.dallyeo.common.exception.BusinessException;
 import com.ppip.dallyeo.common.exception.ErrorCode;
 import com.ppip.dallyeo.common.storage.ImageStorage;
+import com.ppip.dallyeo.common.util.PublicUrlResolver;
 import com.ppip.dallyeo.course.CourseRepository;
 import com.ppip.dallyeo.course.dto.PolylinePoint;
 import com.ppip.dallyeo.run.dto.RunCreateRequest;
@@ -39,13 +40,16 @@ public class RunService {
     private final CourseRepository courseRepository;
     private final AchievementService achievementService;
     private final ImageStorage imageStorage;
+    private final PublicUrlResolver urls;
 
     public RunService(RunRepository runRepository, CourseRepository courseRepository,
-                      AchievementService achievementService, ImageStorage imageStorage) {
+                      AchievementService achievementService, ImageStorage imageStorage,
+                      PublicUrlResolver urls) {
         this.runRepository = runRepository;
         this.courseRepository = courseRepository;
         this.achievementService = achievementService;
         this.imageStorage = imageStorage;
+        this.urls = urls;
     }
 
     /** 러닝 기록 저장 (US-RUN-1). 검증 위반 → 400. */
@@ -164,7 +168,7 @@ public class RunService {
                 run.getDurationSeconds(),
                 run.getAveragePaceSeconds(),
                 run.getCalories(),
-                run.getImageUrl(),
+                urls.absolute(run.getImageUrl()),
                 null,
                 run.getStartedAt(),
                 run.getFinishedAt(),
@@ -177,7 +181,7 @@ public class RunService {
                 lookupCourseName(run.getCourseId()),
                 run.getDistanceMeters(),
                 run.getDurationSeconds(),
-                run.getImageUrl(),
+                urls.absolute(run.getImageUrl()),
                 run.getFinishedAt());
     }
 
