@@ -48,12 +48,12 @@
 - **TODO(전환)**: 트래픽/용량이 늘면 S3 + presigned URL 로 이전. 그때 `ImageStorage` 만 교체하면 되도록
   저장 로직은 이미 한 클래스에 격리해 두었습니다.
 
-## 🟡 코스 이미지 — 파일 수급 대기 (2026-09-02)
-`course.image_url` 컬럼·응답 노출·정적 서빙(`/images/courses/**`)은 완료. **이미지 파일만 받으면 됩니다.**
-- 받은 뒤 할 일: ① `src/main/resources/static/images/courses/` 에 파일 배치
-  ② `courses.json` 각 코스에 `"imageUrl": "/images/courses/{파일명}"` 기입
-  ③ 이미 시드된 운영 DB용 백필 SQL 작성(시드 로더는 기존 행을 갱신하지 않음)
-- 상세 규약: `src/main/resources/static/images/courses/README.md`
+## 🟢 코스 이미지 — 10/10 배치 완료 (2026-09-15)
+디자인 이미지를 받아 `static/images/courses/{코스id}.png` 로 배치하고 `courses.json` 에 `imageUrl` 기입.
+- 받은 파일명이 한글(`짬뽕런.png` 등)이라 **코스 id 기준 영문으로 변경** — 클라이언트가 URL 인코딩을 신경 쓰지 않아도 된다.
+- 운영 DB 백필: **`update-course-images.sql`** (시드 로더는 기존 행을 갱신하지 않으므로 필요).
+  이미지 파일은 classpath static 이라 JAR 에 포함된다 — 서버에 따로 업로드할 필요 없음.
+- 검증: 10장 전부 200 응답, `GET /courses`·`GET /courses/{id}` 모두 `imageUrl` 노출. 누락 없음.
 
 ## 🟢 배지 매칭률 — 개선 완료(미배포), 잔여 한계 기록 (2026-09-02)
 목록에도 `badges` 를 실었지만, **매칭되는 장소 자체가 적다**는 점은 그대로입니다.
